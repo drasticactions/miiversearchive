@@ -48,5 +48,11 @@
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MiiverseClient\Mntone.MiiverseClient\Mntone.MiiverseClient.csproj">
+      <Project>{aace4748-0031-435d-b0c0-a4e1bd656eaf}</Project>
+      <Name>Mntone.MiiverseClient</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
