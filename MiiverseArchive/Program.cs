@@ -26,12 +26,31 @@ namespace MiiverseArchive
                 var posts = db.GetCollection<Post>("drawingcollection");
                 var allPosts = posts.Find(Query.All());
                 Console.WriteLine($"Post Count: {allPosts.Count()}");
-                var webClient = new WebClient();
                 Directory.CreateDirectory("images");
-                foreach(var post in allPosts)
+                var webClient = new WebClient();
+                DownloadDrawings(webClient, allPosts);
+            }
+        }
+
+        static private void DownloadDrawings(WebClient webClient, IEnumerable<Post> allPosts)
+        {
+            foreach (var post in allPosts)
+            {
+                try
                 {
-                    Console.WriteLine($"Downloading {post.ID}.jpg");
-                    webClient.DownloadFile(post.ImageUri, $"images\\{post.ID}.jpg");
+                    if (!File.Exists($"images\\{post.ID}.jpg"))
+                    {
+                        Console.WriteLine($"Downloading {post.ID}.jpg");
+                        webClient.DownloadFile(post.ImageUri, $"images\\{post.ID}.jpg");
+                    }
+                    else
+                    {
+                        //Console.WriteLine($"images\\{post.ID}.jpg exists!");
+                    }
+                }
+                catch (Exception)
+                {
+                    File.AppendAllText("failed.txt", post.ImageUri.ToString() + Environment.NewLine);
                 }
             }
         }
@@ -70,6 +89,20 @@ namespace MiiverseArchive
                 var allPosts = posts.Find(Query.All());
                 double nextPost = 0;
                 double nextPostMinutes = 0;
+                DateTime time;
+                if (allPosts.Any())
+                {
+                    var post = allPosts.OrderBy(n => n.PostedDate).First();
+                    var epoch = post.PostedDate - new DateTime(1970, 1, 1);
+                    int secondsSinceEpoch = (int)epoch.TotalSeconds;
+                    nextPost = -(secondsSinceEpoch);
+                    time = post.PostedDate;
+                }
+                else
+                {
+                    time = DateTime.UtcNow;
+                }
+                var webClient = new WebClient();
                 while (true)
                 {
                     var indieGameDrawing = await ctx.GetDrawingAsync(gameTest, nextPost);
@@ -87,10 +120,11 @@ namespace MiiverseArchive
                     // Because we could end up just getting the same last hour of posts. So instead.
                     // Keep substracting 15 minutes from the current time. That should result in getting newer posts.
                     nextPostMinutes = nextPostMinutes + 15;
-                    var epoch = DateTime.UtcNow.AddMinutes(-1 * nextPostMinutes) - new DateTime(1970, 1, 1);
+                    var epoch = time.AddMinutes(-1 * nextPostMinutes) - new DateTime(1970, 1, 1);
                     int secondsSinceEpoch = (int)epoch.TotalSeconds;
                     nextPost = -(secondsSinceEpoch);
                     Console.WriteLine("Next Post Time: {0} Total Inserted: {1}", nextPost, posts.Count());
+                    DownloadDrawings(webClient, indieGameDrawing.Posts);
                 }
             }
         }
