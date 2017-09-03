@@ -6,15 +6,34 @@ using Mntone.MiiverseClient.Entities.Community;
 using Mntone.MiiverseClient.Entities.Token;
 using Mntone.MiiverseClient.Managers;
 using System.Threading.Tasks;
+using System.Net;
 using Mntone.MiiverseClient.Entities.Post;
-
+using System.IO;
 namespace MiiverseArchive
 {
     class Program
     {
         static void Main()
         {
-            MainAsync().GetAwaiter().GetResult();
+            //MainAsync().GetAwaiter().GetResult();
+            DownloadAsync().GetAwaiter().GetResult();
+        }
+
+        static async Task DownloadAsync()
+        {
+            using (var db = new LiteDatabase("drawing.db"))
+            {
+                var posts = db.GetCollection<Post>("drawingcollection");
+                var allPosts = posts.Find(Query.All());
+                Console.WriteLine($"Post Count: {allPosts.Count()}");
+                var webClient = new WebClient();
+                Directory.CreateDirectory("images");
+                foreach(var post in allPosts)
+                {
+                    Console.WriteLine($"Downloading {post.ID}.jpg");
+                    webClient.DownloadFile(post.ImageUri, $"images\\{post.ID}.jpg");
+                }
+            }
         }
 
         static async Task MainAsync()
@@ -50,14 +69,7 @@ namespace MiiverseArchive
                 var posts = db.GetCollection<Post>("drawingcollection");
                 var allPosts = posts.Find(Query.All());
                 double nextPost = 0;
-                int total = 0;
-                if (allPosts.Any())
-                {
-                    total = allPosts.Count();
-                    var epoch = allPosts.Last().PostedDate - new DateTime(1970, 1, 1);
-                    int secondsSinceEpoch = (int)epoch.TotalSeconds;
-                    nextPost = -(secondsSinceEpoch);
-                }
+                double nextPostMinutes = 0;
                 while (true)
                 {
                     var indieGameDrawing = await ctx.GetDrawingAsync(gameTest, nextPost);
@@ -70,9 +82,15 @@ namespace MiiverseArchive
                     {
                         posts.Upsert(post);
                     }
-                    nextPost = indieGameDrawing.NextPageTimestamp;
-                    total = total + indieGameDrawing.Posts.Count();
-                    Console.WriteLine("Next Post Time: {0} Total Inserted: {1}", nextPost, total);
+                    // We can't get exact times for posts, only relative times like "About an hour".
+                    // Because of that, we can't rely on using the last post to set where we start from.
+                    // Because we could end up just getting the same last hour of posts. So instead.
+                    // Keep substracting 15 minutes from the current time. That should result in getting newer posts.
+                    nextPostMinutes = nextPostMinutes + 15;
+                    var epoch = DateTime.UtcNow.AddMinutes(-1 * nextPostMinutes) - new DateTime(1970, 1, 1);
+                    int secondsSinceEpoch = (int)epoch.TotalSeconds;
+                    nextPost = -(secondsSinceEpoch);
+                    Console.WriteLine("Next Post Time: {0} Total Inserted: {1}", nextPost, posts.Count());
                 }
             }
         }
