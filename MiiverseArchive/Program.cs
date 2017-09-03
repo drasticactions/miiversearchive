@@ -15,8 +15,8 @@ namespace MiiverseArchive
     {
         static void Main()
         {
-            //MainAsync().GetAwaiter().GetResult();
-            DownloadAsync().GetAwaiter().GetResult();
+            MainAsync().GetAwaiter().GetResult();
+            //DownloadAsync().GetAwaiter().GetResult();
         }
 
         static async Task DownloadAsync()
