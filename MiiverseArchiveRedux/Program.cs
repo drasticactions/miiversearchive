@@ -2,16 +2,17 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Mntone.MiiverseClient.Entities.Community;
-using Mntone.MiiverseClient.Entities.Token;
-using Mntone.MiiverseClient.Managers;
+using MiiverseArchive.Entities.Community;
+using MiiverseArchive.Entities.Token;
+using MiiverseArchive.Managers;
 using System.Threading.Tasks;
 using System.Net;
-using Mntone.MiiverseClient.Entities.Post;
+using MiiverseArchive.Entities.Post;
 using System.IO;
-using Mntone.MiiverseClient.Entities.Response;
+using MiiverseArchive.Entities.Response;
+using Newtonsoft.Json;
 
-namespace MiiverseArchive
+namespace MiiverseArchiveRedux
 {
     class Program
     {
@@ -75,18 +76,19 @@ namespace MiiverseArchive
             Console.WriteLine("");
             Console.WriteLine("-----------");
 
-            var ctx = oauthClient.Authorize(token, new NintendoNetworkAuthenticationToken(userName, password), "en-US", ViewRegion.Europe).GetAwaiter().GetResult();
-            
+            var ctx = oauthClient.Authorize(token, new NintendoNetworkAuthenticationToken(userName, password), "en-US", ViewRegion.America).GetAwaiter().GetResult();
+
             // TODO: Figure out a way to automate archiving game/user data.
             // Hardcoding this for testing...
             Console.WriteLine("-----------");
             //Console.WriteLine("Archiving: Splatoon (Drawing)");
+            //Console.WriteLine("Archiving: Game Lists");
             Console.WriteLine("Archiving: Game Lists");
             Console.WriteLine("-----------");
             var gameList = ctx.GetCommunityGameListAsync(GameSearchList.All, GamePlatformSearch.Wiiu, 300).GetAwaiter().GetResult();
             var gameTest = new Game("community-14866558073673172583", "Splatoon", "/titles/14866558073673172576/14866558073673172583", new Uri("https://d3esbfg30x759i.cloudfront.net/cnj/zlCfzTYBRmcD4DW6Q5"), "platform-tag-wiiu.png", "Wii U Games");
 
-            using (var db = new LiteDatabase("gamelist.db"))
+            using (var db = new LiteDatabase("gamelist-2.db"))
             {
                 var posts = db.GetCollection<Game>("gamelist");
                 var allPosts = posts.Find(Query.All());
@@ -102,7 +104,7 @@ namespace MiiverseArchive
 
                     foreach (var game in communityList.Games)
                     {
-                        posts.Upsert(game);
+                        posts.Insert(game);
                     }
                     Console.WriteLine($"{posts.Count()}");
                     offset = offset + 30;

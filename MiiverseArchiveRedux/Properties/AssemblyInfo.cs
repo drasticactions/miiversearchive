@@ -5,11 +5,11 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("MiiverseArchive")]
+[assembly: AssemblyTitle("MiiverseArchiveRedux")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("MiiverseArchive")]
+[assembly: AssemblyProduct("MiiverseArchiveRedux")]
 [assembly: AssemblyCopyright("Copyright ©  2017")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
@@ -20,7 +20,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("f6539f2d-da5a-4bd0-a25a-29a0deaa1088")]
+[assembly: Guid("c89b13e6-c1e1-4fca-a946-af85cb468fef")]
 
 // Version information for an assembly consists of the following four values:
 //
