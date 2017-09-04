@@ -41,14 +41,14 @@ namespace MiiverseArchiveRedux
             {
                 try
                 {
-                    if (!File.Exists($"images\\{post.ID}.jpg"))
+                    if (!File.Exists($"images\\{post.ID}.png"))
                     {
-                        Console.WriteLine($"Downloading {post.ID}.jpg");
-                        webClient.DownloadFile(post.ImageUri, $"images\\{post.ID}.jpg");
+                        Console.WriteLine($"Downloading {post.ID}.png);
+                        webClient.DownloadFile(post.ImageUri, $"images\\{post.ID}.png");
                     }
                     else
                     {
-                        //Console.WriteLine($"images\\{post.ID}.jpg exists!");
+                        //Console.WriteLine($"images\\{post.ID}.png exists!");
                     }
                 }
                 catch (Exception)
