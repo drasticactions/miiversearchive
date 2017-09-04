@@ -84,7 +84,7 @@ namespace MiiverseArchive.Context
             {
                 // I know it's JSON encoded and it would be better to just decode/encode it.
                 // But the service it going away so screw it.
-                baseUrl += game.TitleUrl + $"?page_param=%7B%22upinfo%22%3A%22{lastPostTime * -1 }%2C{(int)currentDate}%2C{currentDate}%22%2C%22reftime%22%3A%22{lastPostTime}%22%2C%22order%22%3A%22desc%22%2C%22per_page%22%3A%2250%22%7D ";
+                baseUrl += $"?page_param=%7B%22upinfo%22%3A%22{lastPostTime * -1 }%2C{(int)currentDate}%2C{currentDate}%22%2C%22reftime%22%3A%22{lastPostTime}%22%2C%22order%22%3A%22desc%22%2C%22per_page%22%3A%2250%22%7D ";
             }
 
             var req = new HttpRequestMessage(HttpMethod.Get, baseUrl);
