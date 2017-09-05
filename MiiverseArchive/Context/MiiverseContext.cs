@@ -623,6 +623,11 @@ namespace MiiverseArchive.Context
                 result = DateTime.Now.AddMinutes(-number * minutesMultiplier);
             // We assume Now instead of UTC, because the site is configured for your local
             Debug.WriteLine($"Input: {input} - Result: {result} - UTCNow: {DateTime.UtcNow}");
+            // Now some of you may be wondering. Why -9?
+            // Great question... The timestamps given on the web forum are encoded, from what I can tell,
+            // To the users region. That's done on the server and passed down. I'm not 100% on which timezone it's set to,
+            // but when looking at the results from the website, it seemed to always be 9 hours off? And it wasn't exactly UTC.
+            // So for now, it's this. Until I think of something better or see how other accounts handle it.
             return result.AddHours(-9);
         }
     }
