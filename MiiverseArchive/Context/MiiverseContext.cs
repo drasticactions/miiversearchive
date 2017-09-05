@@ -354,6 +354,17 @@ namespace MiiverseArchive.Context
                 var doc = new HtmlDocument();
                 doc.Load(stream.Result, System.Text.Encoding.UTF8);
                 var mainNode = doc.GetElementbyId("main-body");
+
+                var isHiddenNode = mainNode.Descendants("div").FirstOrDefault(node => node.GetAttributeValue("class", string.Empty) == "no-content");
+                if (isHiddenNode != null)
+                {
+                    return new UserProfileResponse(new User()
+                    {
+                        ScreenName = username,
+                        IsHidden = true
+                    });
+                }
+
                 var avatarUrlNode = mainNode.Descendants("img").FirstOrDefault();
                 var avatarUri = new Uri(avatarUrlNode?.GetAttributeValue("src", string.Empty));
                 var nickNameNode = mainNode.Descendants("a").FirstOrDefault(node => node.GetAttributeValue("class", string.Empty) == "nick-name");

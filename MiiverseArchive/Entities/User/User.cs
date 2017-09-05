@@ -48,5 +48,7 @@ namespace MiiverseArchive.Entities.User
         public List<GameSystem> GameSystem { get; set; }
 
         public List<string> FavoriteGameGenre { get; set; }
+
+        public bool IsHidden { get; set; }
     }
 }
