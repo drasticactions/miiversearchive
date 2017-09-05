@@ -355,6 +355,19 @@ namespace MiiverseArchive.Context
                 doc.Load(stream.Result, System.Text.Encoding.UTF8);
                 var mainNode = doc.GetElementbyId("main-body");
 
+                if (mainNode == null)
+                {
+                    // Sometimes, the user profile feed with return JSON. Because Nintendo be weird. 
+                    // Not gonna throw, gonna assume hidden user for now.
+                    return new UserProfileResponse(new User()
+                    {
+                        ScreenName = username,
+                        IsHidden = true,
+                        IsError = true
+                    });
+                }
+
+
                 var isHiddenNode = mainNode.Descendants("div").FirstOrDefault(node => node.GetAttributeValue("class", string.Empty) == "no-content");
                 if (isHiddenNode != null)
                 {

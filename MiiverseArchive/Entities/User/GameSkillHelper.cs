@@ -11,6 +11,7 @@ namespace MiiverseArchive.Entities.User
         private const string IntermediateLevel = "intermediate";
         private const string ExpertLevel = "expert";
         private const string CasualLevel = "casual";
+        private const string BeginnerLevel = "beginner";
 
         public static GameSkill DetectGameSkillFromClassName(string className)
         {
@@ -22,6 +23,8 @@ namespace MiiverseArchive.Entities.User
                     return GameSkill.Expert;
                 case CasualLevel:
                     return GameSkill.Casual;
+                case BeginnerLevel:
+                    return GameSkill.Beginner;
                 default:
                     throw new Exception("Class name is invalid");
             }

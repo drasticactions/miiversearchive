@@ -11,6 +11,7 @@ using MiiverseArchive.Entities.Post;
 using System.IO;
 using MiiverseArchive.Entities.Response;
 using Newtonsoft.Json;
+using MiiverseArchive.Entities.User;
 
 namespace MiiverseArchiveRedux
 {
@@ -84,92 +85,46 @@ namespace MiiverseArchiveRedux
             Console.WriteLine("-----------");
             //Console.WriteLine("Archiving: Splatoon (Drawing)");
             //Console.WriteLine("Archiving: Game Lists");
-            Console.WriteLine("Archiving: Game Lists");
+            Console.WriteLine("Parsing Test: Users List");
             Console.WriteLine("-----------");
             var gameList = ctx.GetCommunityGameListAsync(GameSearchList.All, GamePlatformSearch.Wiiu, 300).GetAwaiter().GetResult();
-            var postTest = await ctx.GetPostAsync("AYIHAAAEAABEVRTp4iPDww");
-            var repliesTest = await ctx.GetPostResponse("AYIHAAAEAABEVRTp4iPDww", MiiverseArchive.Tools.Constants.WebApiType.Replies);
-            var gameTest = new Game("community-14866558073673172583", "Splatoon", "/titles/14866558073673172576/14866558073673172583", new Uri("https://d3esbfg30x759i.cloudfront.net/cnj/zlCfzTYBRmcD4DW6Q5"), "platform-tag-wiiu.png", "Wii U Games");
-            //using (var db = new LiteDatabase("gamelist-2.db"))
-            //{
-            //    var posts = db.GetCollection<Game>("gamelist");
-            //    var allPosts = posts.Find(Query.All());
-            //    var offset = 0;
-            //    while (true)
-            //    {
-            //        var communityList = await ctx.GetCommunityGameListAsync(GameSearchList.All, GamePlatformSearch.Nintendo3ds, offset);
-            //        if (communityList.Games == null)
-            //        {
-            //            // We're done! Time to wrap it up.
-            //            return;
-            //        }
+            var userIds = File.ReadAllLines("miiverse_users.txt");
 
-            //        foreach (var game in communityList.Games)
-            //        {
-            //            posts.Insert(game);
-            //        }
-            //        Console.WriteLine($"{posts.Count()}");
-            //        offset = offset + 30;
-            //    }
-            //}
+            using (var db = new LiteDatabase("users.db"))
+            {
+                var users = db.GetCollection<User>("users");
+                foreach (var userId in userIds)
+                {
+                    var userEntity = await ctx.GetUserProfileAsync(userId);
+                    Console.WriteLine("Name: {0}", userEntity.User.Name);
+                    Console.WriteLine("ScreenName: {0}", userEntity.User.ScreenName);
+                    Console.WriteLine("IconUri: {0}", userEntity.User.IconUri);
+                    Console.WriteLine("Country: {0}", userEntity.User.Country);
+                    Console.WriteLine("Birthday: {0}", userEntity.User.Birthday);
+                    Console.WriteLine("Birthday Hidden: {0}", userEntity.User.IsBirthdayHidden);
+                    if (userEntity.User.GameSystem != null)
+                    {
+                        foreach (var gameSystem in userEntity.User.GameSystem)
+                        {
+                            Console.WriteLine("GameSystem: {0}", gameSystem);
+                        }
+                    }
+                    if (userEntity.User.FavoriteGameGenre != null)
+                    {
+                        foreach (var gameGenre in userEntity.User.FavoriteGameGenre)
+                        {
+                            Console.WriteLine("GameGenre: {0}", gameGenre);
+                        }
+                    }
+                    Console.WriteLine("GameSkill: {0}", userEntity.User.GameSkill);
+                    Console.WriteLine("-----------");
 
-            //using (var db = new LiteDatabase("talk.db"))
-            //{
-            //    long v = (long)1438204920;
-            //    //var blah = v.FromUnixTime();
-            //    var posts = db.GetCollection<Post>("drawingcollection");
-            //    var allPosts = posts.Find(Query.All());
-            //    double nextPost = 0;
-            //    double nextPostMinutes = 0;
-            //    DateTime time = v.FromUnixTime();
-            //    if (allPosts.Any())
-            //    {
-            //        var post = allPosts.OrderBy(n => n.PostedDate).First();
-            //        var secondsSinceEpoch = post.PostedDate.ToUnixTime();
-            //        nextPost = -(secondsSinceEpoch);
-            //        time = post.PostedDate;
-            //    }
-            //    else
-            //    {
-            //        time = DateTime.UtcNow;
-            //    }
-            //    var webClient = new WebClient();
-            //    var countInserted = 0;
-            //    while (true)
-            //    {
-            //        var indieGameDrawing = await ctx.GetWebApiResponse(gameTest, MiiverseArchive.Tools.Constants.WebApiType.Diary, nextPost);
-            //        if (!indieGameDrawing.Posts.Any())
-            //        {
-            //            // We're done! Time to wrap it up.
-            //            return;
-            //        }
-            //        foreach (var post in indieGameDrawing.Posts)
-            //        {
-
-            //            posts.Upsert(post);
-            //        }
-            //        // We can't get exact times for posts, only relative times like "About an hour".
-            //        // Because of that, we can't rely on using the last post to set where we start from.
-            //        // Because we could end up just getting the same last hour of posts. So instead.
-            //        // Keep substracting 15 minutes from the current time. That should result in getting newer posts.
-            //        TimeSpan epoch;
-            //        time = indieGameDrawing.Posts.Last().PostedDate;
-            //        if (countInserted != posts.Count())
-            //        {
-            //            epoch = time - new DateTime(1970, 1, 1);
-            //        }
-            //        else
-            //        {
-            //            nextPostMinutes = nextPostMinutes + 100;
-            //            epoch = time.AddMinutes(-1 * nextPostMinutes) - new DateTime(1970, 1, 1);
-            //        }
-            //        double secondsSinceEpoch = epoch.TotalSeconds;
-            //        nextPost = -(secondsSinceEpoch);
-            //        Console.WriteLine("Next Post Time: {0} Total Inserted: {1}", nextPost, posts.Count());
-            //        countInserted = posts.Count();
-            //        //DownloadDrawings(webClient, indieGameDrawing.Posts);
-            //    }
-            //}
+                    users.Upsert(userEntity.User);
+                }
+            }
+            //var postTest = await ctx.GetPostAsync("AYIHAAAEAABEVRTp4iPDww");
+            //var repliesTest = await ctx.GetPostResponse("AYIHAAAEAABEVRTp4iPDww", MiiverseArchive.Tools.Constants.WebApiType.Replies);
+            //var gameTest = new Game("community-14866558073673172583", "Splatoon", "/titles/14866558073673172576/14866558073673172583", new Uri("https://d3esbfg30x759i.cloudfront.net/cnj/zlCfzTYBRmcD4DW6Q5"), "platform-tag-wiiu.png", "Wii U Games");
         }
 
         #region Helpers

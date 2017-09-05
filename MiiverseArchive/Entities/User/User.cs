@@ -22,7 +22,8 @@ namespace MiiverseArchive.Entities.User
             ScreenName = screenName;
             IconUri = iconUri;
             Country = country;
-            Birthday = DateTime.Parse(birthday);
+            Birthday = birthday.Contains("Private") ? DateTime.MinValue : DateTime.Parse(birthday);
+            IsBirthdayHidden = Birthday == DateTime.MinValue;
             GameSkill = GameSkillHelper.DetectGameSkillFromClassName(gameSkill);
             GameSystem = new List<GameSystem>();
             foreach (var gameSystem in gameSystems)
@@ -50,5 +51,9 @@ namespace MiiverseArchive.Entities.User
         public List<string> FavoriteGameGenre { get; set; }
 
         public bool IsHidden { get; set; }
+
+        public bool IsBirthdayHidden { get; set; }
+
+        public bool IsError { get; set; }
     }
 }
