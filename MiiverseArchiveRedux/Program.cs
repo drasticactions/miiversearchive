@@ -76,7 +76,7 @@ namespace MiiverseArchiveRedux
             Console.WriteLine("");
             Console.WriteLine("-----------");
 
-            var ctx = oauthClient.Authorize(token, new NintendoNetworkAuthenticationToken(userName, password), "en-US", ViewRegion.America).GetAwaiter().GetResult();
+            var ctx = oauthClient.Authorize(token, new NintendoNetworkAuthenticationToken(userName, password), "en-US", ViewRegion.Japan).GetAwaiter().GetResult();
 
             // TODO: Figure out a way to automate archiving game/user data.
             // Hardcoding this for testing...
@@ -111,17 +111,19 @@ namespace MiiverseArchiveRedux
             //    }
             //}
 
-            using (var db = new LiteDatabase("drawing-test.db"))
+            using (var db = new LiteDatabase("old-final2-test.db"))
             {
+                long v = (long)1438204920;
+                //var blah = v.FromUnixTime();
                 var posts = db.GetCollection<Post>("drawingcollection");
                 var allPosts = posts.Find(Query.All());
                 double nextPost = 0;
                 double nextPostMinutes = 0;
-                DateTime time;
+                DateTime time = v.FromUnixTime();
                 if (allPosts.Any())
                 {
                     var post = allPosts.OrderBy(n => n.PostedDate).First();
-                    var secondsSinceEpoch = ReturnEpochTime(post.PostedDate);
+                    var secondsSinceEpoch = post.PostedDate.ToUnixTime();
                     nextPost = -(secondsSinceEpoch);
                     time = post.PostedDate;
                 }
@@ -132,7 +134,7 @@ namespace MiiverseArchiveRedux
                 var webClient = new WebClient();
                 while (true)
                 {
-                    var indieGameDrawing = await ctx.GetWebApiResponse(gameTest, MiiverseArchive.Tools.Constants.WebApiType.Drawing, nextPost);
+                    var indieGameDrawing = await ctx.GetWebApiResponse(gameTest, MiiverseArchive.Tools.Constants.WebApiType.OldGame, nextPost);
                     if (!indieGameDrawing.Posts.Any())
                     {
                         // We're done! Time to wrap it up.
@@ -146,23 +148,18 @@ namespace MiiverseArchiveRedux
                     // Because of that, we can't rely on using the last post to set where we start from.
                     // Because we could end up just getting the same last hour of posts. So instead.
                     // Keep substracting 15 minutes from the current time. That should result in getting newer posts.
-                    nextPostMinutes = nextPostMinutes + 15;
-                    var epoch = time.AddMinutes(-1 * nextPostMinutes) - new DateTime(1970, 1, 1);
-                    int secondsSinceEpoch = (int)epoch.TotalSeconds;
+                    var epoch = indieGameDrawing.Posts.Last().PostedDate - new DateTime(1970, 1, 1);
+                    //nextPostMinutes = nextPostMinutes + 5;
+                    //var epoch = time.AddMinutes(-1 * nextPostMinutes) - new DateTime(1970, 1, 1);
+                    double secondsSinceEpoch = epoch.TotalSeconds;
                     nextPost = -(secondsSinceEpoch);
                     Console.WriteLine("Next Post Time: {0} Total Inserted: {1}", nextPost, posts.Count());
-                    DownloadDrawings(webClient, indieGameDrawing.Posts);
+                    //DownloadDrawings(webClient, indieGameDrawing.Posts);
                 }
             }
         }
 
         #region Helpers
-
-        private static double ReturnEpochTime(DateTime postedDate)
-        {
-            var epoch = postedDate - new DateTime(1970, 1, 1);
-            return epoch.TotalSeconds;
-        }
 
         private static string GetPassword()
         {

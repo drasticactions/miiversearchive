@@ -58,7 +58,7 @@ namespace MiiverseArchive.Context
             var baseUrl = "https://miiverse.nintendo.net";
             if (currentDate == 0)
             {
-                currentDate = ReturnEpochTime(DateTime.UtcNow);
+                currentDate = ReturnEpochTime(DateTime.Now);
             }
 
             switch(type)
@@ -92,7 +92,7 @@ namespace MiiverseArchive.Context
             return Client.SendAsync(req).ToTaskOfStream().ContinueWith(stream =>
             {
                 var doc = new HtmlDocument();
-                doc.Load(stream.Result);
+                doc.Load(stream.Result, System.Text.Encoding.UTF8);
 
                 var posts = ParsePosts(type, doc);
                 double postTime = 0;
@@ -154,7 +154,7 @@ namespace MiiverseArchive.Context
             return Client.SendAsync(req).ToTaskOfStream().ContinueWith(stream =>
             {
                 var doc = new HtmlDocument();
-                doc.Load(stream.Result);
+                doc.Load(stream.Result, System.Text.Encoding.UTF8);
 
                 var favoriteButton =
                     doc.DocumentNode.Descendants("button")
@@ -214,7 +214,7 @@ namespace MiiverseArchive.Context
             return Client.SendAsync(req).ToTaskOfStream().ContinueWith(stream =>
             {
                 var doc = new HtmlDocument();
-                doc.Load(stream.Result);
+                doc.Load(stream.Result, System.Text.Encoding.UTF8);
                 var gameListNode =
                     doc.DocumentNode.Descendants("ul")
                         .FirstOrDefault(
@@ -281,7 +281,7 @@ namespace MiiverseArchive.Context
             return Client.SendAsync(req).ToTaskOfStream().ContinueWith(stream =>
             {
                 var doc = new HtmlDocument();
-                doc.Load(stream.Result);
+                doc.Load(stream.Result, System.Text.Encoding.UTF8);
                 var mainNode = doc.GetElementbyId("main-body");
                 var avatarUrlNode = mainNode.Descendants("img").FirstOrDefault();
                 var avatarUri = new Uri(avatarUrlNode?.GetAttributeValue("src", string.Empty));
@@ -340,7 +340,7 @@ namespace MiiverseArchive.Context
             return Client.SendAsync(req).ToTaskOfStream().ContinueWith(stream =>
             {
                 var doc = new HtmlDocument();
-                doc.Load(stream.Result);
+                doc.Load(stream.Result, System.Text.Encoding.UTF8);
                 var postNode = doc.GetElementbyId("post-content");
                 var post = ParsePost(postNode);
                 return new PostResponse(post);
@@ -356,7 +356,7 @@ namespace MiiverseArchive.Context
             return Client.SendAsync(req).ToTaskOfStream().ContinueWith(stream =>
             {
                 var doc = new HtmlDocument();
-                doc.Load(stream.Result);
+                doc.Load(stream.Result, System.Text.Encoding.UTF8);
 
                 var mainBody = doc.GetElementbyId("main-body");
                 var postList = mainBody.Descendants("div").Where(node => node.GetAttributeValue("id", string.Empty).Contains("post-"));
@@ -378,7 +378,7 @@ namespace MiiverseArchive.Context
             return Client.SendAsync(req).ToTaskOfStream().ContinueWith(stream =>
             {
                 var doc = new HtmlDocument();
-                doc.Load(stream.Result);
+                doc.Load(stream.Result, System.Text.Encoding.UTF8);
 
                 var postsNode = doc.GetElementbyId("main-body").GetElementByClassName("post-list").ChildNodes.Where(n => n.HasClassName("post") && !n.HasClassName("none"));
                 var posts = postsNode.Select(ParsePost).ToList();
@@ -620,10 +620,10 @@ namespace MiiverseArchive.Context
             string numberStr = input.Split(' ')[0];
             int number;
             if (int.TryParse(numberStr, out number))
-                result = DateTime.UtcNow.AddMinutes(-number * minutesMultiplier);
+                result = DateTime.Now.AddMinutes(-number * minutesMultiplier);
             // We assume Now instead of UTC, because the site is configured for your local
             Debug.WriteLine($"Input: {input} - Result: {result} - UTCNow: {DateTime.UtcNow}");
-            return result;
+            return result.AddHours(-9);
         }
     }
 }
