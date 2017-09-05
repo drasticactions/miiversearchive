@@ -1,8 +1,10 @@
+
+
 ### READ THIS FIRST
 
 This repo is intended as a scratch for figuring out the best ways to parse the Miiverse site. I don't really intend on this becoming a defacto project. As such, you _can_ fork, but I'm not going to accept PRs, because this was more intended to show my progress and not for some end product.
 
-If you want to contribute, you should _instead_ go to [MiiWorse](http://chat.efnet.org:9090/?channels=%23miiworse), the Archive Team IRC channel, where the real work will be done.
+If you want to contribute, you should _instead_ go to [MiiWorse](http://chat.efnet.org:9090/?channels=%23miiworse), the Archive Team IRC channel, where the real work will be done. Also, read [this Archive Team Wiki page](http://archiveteam.org/index.php?title=Miiverse) to get a heads up as to the pages we're dealing with.
 
 ---
 
