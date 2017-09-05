@@ -60,6 +60,7 @@ namespace MiiverseArchiveRedux
 
         static async Task MainAsync()
         {
+            var testing = DateTime.Now.AddDays(30).ToUnixTime();
             var oauthClient = new MiiverseOAuthClient();
             var token = oauthClient.GetTokenAsync().GetAwaiter().GetResult();
             Console.WriteLine("client_id:\t{0}", token.ClientID);
@@ -86,8 +87,9 @@ namespace MiiverseArchiveRedux
             Console.WriteLine("Archiving: Game Lists");
             Console.WriteLine("-----------");
             var gameList = ctx.GetCommunityGameListAsync(GameSearchList.All, GamePlatformSearch.Wiiu, 300).GetAwaiter().GetResult();
+            var postTest = await ctx.GetPostAsync("AYIHAAAEAABEVRTp4iPDww");
+            var repliesTest = await ctx.GetPostResponse("AYIHAAAEAABEVRTp4iPDww", MiiverseArchive.Tools.Constants.WebApiType.Replies);
             var gameTest = new Game("community-14866558073673172583", "Splatoon", "/titles/14866558073673172576/14866558073673172583", new Uri("https://d3esbfg30x759i.cloudfront.net/cnj/zlCfzTYBRmcD4DW6Q5"), "platform-tag-wiiu.png", "Wii U Games");
-
             //using (var db = new LiteDatabase("gamelist-2.db"))
             //{
             //    var posts = db.GetCollection<Game>("gamelist");
@@ -111,52 +113,63 @@ namespace MiiverseArchiveRedux
             //    }
             //}
 
-            using (var db = new LiteDatabase("old-final2-test.db"))
-            {
-                long v = (long)1438204920;
-                //var blah = v.FromUnixTime();
-                var posts = db.GetCollection<Post>("drawingcollection");
-                var allPosts = posts.Find(Query.All());
-                double nextPost = 0;
-                double nextPostMinutes = 0;
-                DateTime time = v.FromUnixTime();
-                if (allPosts.Any())
-                {
-                    var post = allPosts.OrderBy(n => n.PostedDate).First();
-                    var secondsSinceEpoch = post.PostedDate.ToUnixTime();
-                    nextPost = -(secondsSinceEpoch);
-                    time = post.PostedDate;
-                }
-                else
-                {
-                    time = DateTime.UtcNow;
-                }
-                var webClient = new WebClient();
-                while (true)
-                {
-                    var indieGameDrawing = await ctx.GetWebApiResponse(gameTest, MiiverseArchive.Tools.Constants.WebApiType.OldGame, nextPost);
-                    if (!indieGameDrawing.Posts.Any())
-                    {
-                        // We're done! Time to wrap it up.
-                        return;
-                    }
-                    foreach (var post in indieGameDrawing.Posts)
-                    {
-                        posts.Upsert(post);
-                    }
-                    // We can't get exact times for posts, only relative times like "About an hour".
-                    // Because of that, we can't rely on using the last post to set where we start from.
-                    // Because we could end up just getting the same last hour of posts. So instead.
-                    // Keep substracting 15 minutes from the current time. That should result in getting newer posts.
-                    var epoch = indieGameDrawing.Posts.Last().PostedDate - new DateTime(1970, 1, 1);
-                    //nextPostMinutes = nextPostMinutes + 5;
-                    //var epoch = time.AddMinutes(-1 * nextPostMinutes) - new DateTime(1970, 1, 1);
-                    double secondsSinceEpoch = epoch.TotalSeconds;
-                    nextPost = -(secondsSinceEpoch);
-                    Console.WriteLine("Next Post Time: {0} Total Inserted: {1}", nextPost, posts.Count());
-                    //DownloadDrawings(webClient, indieGameDrawing.Posts);
-                }
-            }
+            //using (var db = new LiteDatabase("talk.db"))
+            //{
+            //    long v = (long)1438204920;
+            //    //var blah = v.FromUnixTime();
+            //    var posts = db.GetCollection<Post>("drawingcollection");
+            //    var allPosts = posts.Find(Query.All());
+            //    double nextPost = 0;
+            //    double nextPostMinutes = 0;
+            //    DateTime time = v.FromUnixTime();
+            //    if (allPosts.Any())
+            //    {
+            //        var post = allPosts.OrderBy(n => n.PostedDate).First();
+            //        var secondsSinceEpoch = post.PostedDate.ToUnixTime();
+            //        nextPost = -(secondsSinceEpoch);
+            //        time = post.PostedDate;
+            //    }
+            //    else
+            //    {
+            //        time = DateTime.UtcNow;
+            //    }
+            //    var webClient = new WebClient();
+            //    var countInserted = 0;
+            //    while (true)
+            //    {
+            //        var indieGameDrawing = await ctx.GetWebApiResponse(gameTest, MiiverseArchive.Tools.Constants.WebApiType.Diary, nextPost);
+            //        if (!indieGameDrawing.Posts.Any())
+            //        {
+            //            // We're done! Time to wrap it up.
+            //            return;
+            //        }
+            //        foreach (var post in indieGameDrawing.Posts)
+            //        {
+
+            //            posts.Upsert(post);
+            //        }
+            //        // We can't get exact times for posts, only relative times like "About an hour".
+            //        // Because of that, we can't rely on using the last post to set where we start from.
+            //        // Because we could end up just getting the same last hour of posts. So instead.
+            //        // Keep substracting 15 minutes from the current time. That should result in getting newer posts.
+            //        TimeSpan epoch;
+            //        time = indieGameDrawing.Posts.Last().PostedDate;
+            //        if (countInserted != posts.Count())
+            //        {
+            //            epoch = time - new DateTime(1970, 1, 1);
+            //        }
+            //        else
+            //        {
+            //            nextPostMinutes = nextPostMinutes + 100;
+            //            epoch = time.AddMinutes(-1 * nextPostMinutes) - new DateTime(1970, 1, 1);
+            //        }
+            //        double secondsSinceEpoch = epoch.TotalSeconds;
+            //        nextPost = -(secondsSinceEpoch);
+            //        Console.WriteLine("Next Post Time: {0} Total Inserted: {1}", nextPost, posts.Count());
+            //        countInserted = posts.Count();
+            //        //DownloadDrawings(webClient, indieGameDrawing.Posts);
+            //    }
+            //}
         }
 
         #region Helpers

@@ -10,7 +10,19 @@ namespace MiiverseArchive.Entities.Post
 
         }
 
-		public Post(string id, bool accept, string discussionType, DateTime time, string text, uint replyCount, uint empathyCount, bool isPlayed, bool isSpoiler, PostUser user, FeelingType feeling, PostCommunity community)
+        public Post(string id, bool isDeleted)
+        {
+            this.ID = id;
+            this.IsDeleted = isDeleted;
+        }
+
+        public Post(string id, bool accept, string discussionType, DateTime time, string text, uint replyCount, uint empathyCount, bool isPlayed, bool isSpoiler, PostUser user, FeelingType feeling, PostCommunity community, string inReplyToId)
+            : this(id, accept, discussionType, time, text, replyCount, empathyCount, isPlayed, isSpoiler, null, user, feeling, community)
+        {
+            this.InReplyToId = inReplyToId;
+        }
+
+        public Post(string id, bool accept, string discussionType, DateTime time, string text, uint replyCount, uint empathyCount, bool isPlayed, bool isSpoiler, PostUser user, FeelingType feeling, PostCommunity community)
 			: this(id, accept, discussionType, time, text, replyCount, empathyCount, isPlayed, isSpoiler, null, user, feeling, community)
 		{ }
 
@@ -151,5 +163,15 @@ namespace MiiverseArchive.Entities.Post
 		/// Community
 		/// </summary>
 		public PostCommunity Community { get; set; }
+
+        /// <summary>
+		/// Is Message Deleted
+		/// </summary>
+        public bool IsDeleted { get; set; }
+
+        /// <summary>
+		/// In Reply To Id
+		/// </summary>
+        public string InReplyToId { get; set; }
 	}
 }

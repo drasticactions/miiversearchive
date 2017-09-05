@@ -51,6 +51,61 @@ namespace MiiverseArchive.Context
 
         }
 
+        public Task<WebApiResponse> GetPostResponse(string postId, WebApiType type, double lastPostTime = 0, double currentDate = 0)
+        {
+            AccessCheck();
+
+            var baseUrl = $"https://miiverse.nintendo.net/posts/{postId}";
+            if (currentDate == 0)
+            {
+                currentDate = ReturnEpochTime(DateTime.Now);
+            }
+
+            switch (type)
+            {
+                case WebApiType.Replies:
+                    baseUrl += "/replies";
+                    break;
+            }
+
+            if (lastPostTime != 0)
+            {
+                baseUrl += $"?page_param=%7B%22upinfo%22%3A%22{lastPostTime * -1 }%2C{(int)currentDate}%2C{currentDate}%22%2C%22reftime%22%3A%22{lastPostTime}%22%2C%22per_page%22%3A120%2C%22order%22%3A%22asc%22%7D&selected=all";
+            }
+            else
+            {
+                baseUrl += $"?page_param=%7B%22per_page%22%3A120%2C%22order%22%3A%22asc%22%7D&selected=all";
+            }
+
+            var req = new HttpRequestMessage(HttpMethod.Get, baseUrl);
+            req.Headers.Add("X-Requested-With", "XMLHttpRequest");
+            return Client.SendAsync(req).ToTaskOfStream().ContinueWith(stream =>
+            {
+                var doc = new HtmlDocument();
+                doc.Load(stream.Result, System.Text.Encoding.UTF8);
+
+                var posts = new List<Post>();
+
+                switch (type)
+                {
+                    case WebApiType.Replies:
+                        posts = ParsePosts(type, doc);
+                        break;
+                    case WebApiType.Posts:
+                        posts.Add(ParsePost(doc.GetElementbyId("main-body").GetElementByClassName("post-list").ChildNodes.FirstOrDefault(n => n.HasClassName("post") && !n.HasClassName("none"))));
+                        posts.Select(n => n.InReplyToId = postId);
+                        break;
+                }
+                double postTime = 0;
+                if (posts.Any())
+                {
+                    postTime = -(ReturnEpochTime(posts.Last().PostedDate));
+                }
+
+                return new WebApiResponse(currentDate, postTime, posts);
+            });
+        }
+
         public Task<WebApiResponse> GetWebApiResponse(Game game, WebApiType type, double lastPostTime = 0, double currentDate = 0)
         {
             AccessCheck();
@@ -78,13 +133,23 @@ namespace MiiverseArchive.Context
                 case WebApiType.OldGame:
                     baseUrl += game.TitleUrl + "/old";
                     break;
+                case WebApiType.Replies:
+                    baseUrl += game.TitleUrl.Replace("title", "posts") + "/replies";
+                    break;
+                case WebApiType.Posts:
+                    baseUrl += game.TitleUrl.Replace("title", "posts");
+                    break;
             }
 
-            if (lastPostTime != 0)
+            if (lastPostTime != 0 && (type != WebApiType.Replies || type != WebApiType.Posts))
             {
                 // I know it's JSON encoded and it would be better to just decode/encode it.
                 // But the service it going away so screw it.
                 baseUrl += $"?page_param=%7B%22upinfo%22%3A%22{lastPostTime * -1 }%2C{(int)currentDate}%2C{currentDate}%22%2C%22reftime%22%3A%22{lastPostTime}%22%2C%22order%22%3A%22desc%22%2C%22per_page%22%3A%2250%22%7D ";
+            }
+            else if (lastPostTime != 0)
+            {
+                baseUrl += $"?page_param=%7B%22upinfo%22%3A%22{lastPostTime * -1 }%2C{(int)currentDate}%2C{currentDate}%22%2C%22reftime%22%3A%22{lastPostTime}%22%2C%22per_page%22%3A120%2C%22order%22%3A%22asc%22%7D&selected=all";
             }
 
             var req = new HttpRequestMessage(HttpMethod.Get, baseUrl);
@@ -111,6 +176,12 @@ namespace MiiverseArchive.Context
 
             switch (type)
             {
+                case WebApiType.Replies:
+                    var replyListNode = doc.DocumentNode.Descendants("ul")
+                        .FirstOrDefault(node => node.GetAttributeValue("class", string.Empty).Contains("list reply-list"));
+                    var replyNodes = replyListNode?.ChildNodes.Where(n => n.HasClassName("post") && !n.HasClassName("none"));
+                    posts = replyNodes == null ? new List<Post>() : replyNodes.Select(ParsePost).ToList();
+                    break;
                 case WebApiType.Diary:
                 case WebApiType.Drawing:
                 case WebApiType.InGame:
@@ -450,22 +521,39 @@ namespace MiiverseArchive.Context
             var postTopicCategory = postNode.Descendants("a").Where(n => n.GetAttributeValue("class", string.Empty).Contains("post-topic-category")).FirstOrDefault();
             string topic = postTopicCategory != null ? postTopicCategory.InnerText : "";
 
-            var postMetaNode = postContentNode.GetElementByClassName("post-meta");
+            var isReply = false;
+            var postMetaNode = postContentNode.Descendants("div").Where(n => n.GetAttributeValue("class", string.Empty).Contains("post-meta")).FirstOrDefault();
+            if (postMetaNode == null)
+            {
+                isReply = true;
+                postMetaNode = postContentNode.Descendants("div").Where(n => n.GetAttributeValue("class", string.Empty).Contains("reply-meta")).FirstOrDefault();
+            }
 
-            var id = postNode.Id.Substring(5);
-            var replyCount = postMetaNode.GetElementByClassName("reply").GetElementByClassName("reply-count").GetInnerTextAsUInt32();
+            var id = isReply ? postNode.Id.Substring(6) : postNode.Id.Substring(5);
+
+            var isDeletedNode = postContentNode.Descendants("p").Where(n => n.GetAttributeValue("class", string.Empty).Contains("deleted-message")).FirstOrDefault();
+            if (isDeletedNode != null)
+            {
+                return new Post(id, true);
+            }
+
+            uint replyCount = 0;
+            if (!isReply)
+            {
+                replyCount = postMetaNode.GetElementByClassName("reply").GetElementByClassName("reply-count").GetInnerTextAsUInt32();
+            }
             var empathyCount = postMetaNode.GetElementByClassName("empathy").GetElementByClassName("empathy-count").GetInnerTextAsUInt32();
             var isPlayed = postMetaNode.GetElementsByClassName("played").Count() != 0;
             var isSpoiler = postNode.HasClassName("hidden");
 
             string text = null;
             Uri imageUri = null;
-
-            var textNodes = postContentNode.GetElementsByClassName("post-content-text");
+        
+            var textNodes = postContentNode.GetElementsByClassName(isReply ? "reply-content-text" : "post-content-text");
             var isImagePost = !textNodes.Any();
             if (isImagePost)
             {
-                imageUri = postContentNode.GetElementByClassName("post-content-memo").GetImageSource();
+                imageUri = postContentNode.GetElementByClassName(isReply ? "reply-content-memo" : "post-content-memo").GetImageSource();
             }
             else
             {

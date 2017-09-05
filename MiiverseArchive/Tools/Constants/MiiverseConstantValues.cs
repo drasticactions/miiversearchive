@@ -8,7 +8,9 @@ namespace MiiverseArchive.Tools.Constants
         Diary,
         Discussion,
         InGame,
-        OldGame
+        OldGame,
+        Replies,
+        Posts
     }
 
 	public static class MiiverseConstantValues
