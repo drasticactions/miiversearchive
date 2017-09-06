@@ -29,8 +29,8 @@ namespace MiiverseArchive.Entities.User
             ScreenName = screenName;
             IconUri = iconUri;
             Country = country;
-            Birthday = birthday.Contains("Private") ? DateTime.MinValue : DateTime.Parse(birthday);
-            IsBirthdayHidden = Birthday == DateTime.MinValue;
+            Birthday = birthday;
+            IsBirthdayHidden = birthday.Contains("Private");
             GameSkill = GameSkillHelper.DetectGameSkillFromClassName(gameSkill);
             GameSystem = new List<GameSystem>();
             foreach (var gameSystem in gameSystems)
@@ -56,7 +56,7 @@ namespace MiiverseArchive.Entities.User
 
         public string Country { get; set; }
 
-        public DateTime Birthday { get; set; }
+        public string Birthday { get; set; }
 
         public GameSkill GameSkill { get; set; }
 
