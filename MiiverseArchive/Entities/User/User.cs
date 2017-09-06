@@ -16,7 +16,14 @@ namespace MiiverseArchive.Entities.User
             string birthday,
             string gameSkill,
             IEnumerable<string> gameSystems,
-            IEnumerable<string> favoriteGameGenre)
+            IEnumerable<string> favoriteGameGenre,
+            string bio,
+            int followerCount,
+            int followingCount,
+            int friendCount,
+            int postCount,
+            int empathyCount,
+            string bannerImage)
         {
             Name = name;
             ScreenName = screenName;
@@ -30,6 +37,13 @@ namespace MiiverseArchive.Entities.User
             {
                 GameSystem.Add(GameSystemHelper.DetectGameSystemFromClassName(gameSystem));
             }
+            Bio = bio;
+            FollowerCount = followerCount;
+            FollowingCount = followingCount;
+            FriendsCount = friendCount;
+            TotalPosts = postCount;
+            EmpathyCount = empathyCount;
+            SidebarCoverUrl = bannerImage;
         }
 
         public int Id { get; set; }
@@ -55,5 +69,19 @@ namespace MiiverseArchive.Entities.User
         public bool IsBirthdayHidden { get; set; }
 
         public bool IsError { get; set; }
+
+        public string Bio { get; set; }
+
+        public int EmpathyCount { get; set; }
+
+        public int TotalPosts { get; set; }
+
+        public int FriendsCount { get; set; }
+
+        public int FollowingCount { get; set; }
+
+        public int FollowerCount { get; set; }
+
+        public string SidebarCoverUrl { get; set; }
     }
 }

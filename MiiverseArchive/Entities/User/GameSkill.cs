@@ -11,6 +11,7 @@ namespace MiiverseArchive.Entities.User
         Expert,
         Intermediate,
         Casual,
-        Beginner
+        Beginner,
+        Hidden
     }
 }

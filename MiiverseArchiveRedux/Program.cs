@@ -93,15 +93,30 @@ namespace MiiverseArchiveRedux
             using (var db = new LiteDatabase("users.db"))
             {
                 var users = db.GetCollection<User>("users");
-                foreach (var userId in userIds)
+                var allUsers = users.Find(Query.All());
+                var startingCount = 0;
+                if (allUsers.Any())
                 {
-                    var userEntity = await ctx.GetUserProfileAsync(userId);
+                    var userNames = allUsers.Select(n => n.ScreenName).ToList();
+                    startingCount = userNames.IndexOf(allUsers.Last().ScreenName) + 1;
+                }
+
+                for (var i = startingCount; i <= userIds.Count(); i++)
+                {
+                    var userEntity = await ctx.GetUserProfileAsync(userIds[i]);
                     Console.WriteLine("Name: {0}", userEntity.User.Name);
                     Console.WriteLine("ScreenName: {0}", userEntity.User.ScreenName);
+                    Console.WriteLine("Following: {0}", userEntity.User.FollowingCount);
+                    Console.WriteLine("FollowerCount: {0}", userEntity.User.FollowerCount);
+                    Console.WriteLine("FriendsCount: {0}", userEntity.User.FriendsCount);
+                    Console.WriteLine("TotalPosts: {0}", userEntity.User.TotalPosts);
+                    Console.WriteLine("EmpathyCount: {0}", userEntity.User.EmpathyCount);
+                    Console.WriteLine("Bio: {0}", userEntity.User.Bio);
                     Console.WriteLine("IconUri: {0}", userEntity.User.IconUri);
                     Console.WriteLine("Country: {0}", userEntity.User.Country);
                     Console.WriteLine("Birthday: {0}", userEntity.User.Birthday);
                     Console.WriteLine("Birthday Hidden: {0}", userEntity.User.IsBirthdayHidden);
+                    Console.WriteLine("Sidebar Image: {0}", userEntity.User.SidebarCoverUrl);
                     if (userEntity.User.GameSystem != null)
                     {
                         foreach (var gameSystem in userEntity.User.GameSystem)
@@ -119,6 +134,7 @@ namespace MiiverseArchiveRedux
                     Console.WriteLine("GameSkill: {0}", userEntity.User.GameSkill);
                     Console.WriteLine("-----------");
 
+                    userEntity.User.Id = i;
                     users.Upsert(userEntity.User);
                 }
             }
@@ -150,7 +166,7 @@ namespace MiiverseArchiveRedux
                     continue;
                 }
 
-                Console.Write("*");
+                //Console.Write("*");
                 inputList.Add(info.KeyChar);
             }
 

@@ -378,6 +378,30 @@ namespace MiiverseArchive.Context
                     });
                 }
 
+                var sidebarImageNode = mainNode.Descendants("img").FirstOrDefault(node => node.GetAttributeValue("class", string.Empty).Contains("sidebar-cover-image"));
+                var sidebarImageUrl = sidebarImageNode?.GetAttributeValue("src", string.Empty);
+
+                var friendCountNode = mainNode.Descendants("span").FirstOrDefault(node => node.GetAttributeValue("class", string.Empty).Contains("test-friend-count"));
+                var friendInnerText = friendCountNode.InnerText.Split('/').First();
+                var friendCount = 0;
+                Int32.TryParse(friendInnerText, out friendCount);
+
+                var postCountNode = mainNode.Descendants("span").FirstOrDefault(node => node.GetAttributeValue("class", string.Empty).Contains("test-post-count"));
+                var postCount = 0;
+                Int32.TryParse(postCountNode.InnerText, out postCount);
+
+                var empathyCountNode = mainNode.Descendants("span").FirstOrDefault(node => node.GetAttributeValue("class", string.Empty).Contains("test-empathy-count"));
+                var empathyCount = 0;
+                Int32.TryParse(empathyCountNode.InnerText, out empathyCount);
+
+                var followingCountNode = mainNode.Descendants("span").FirstOrDefault(node => node.GetAttributeValue("class", string.Empty).Contains("number test-following-count"));
+                var followingCount = 0;
+                Int32.TryParse(followingCountNode.InnerText, out followingCount);
+
+                var followersCountNode = mainNode.Descendants("span").FirstOrDefault(node => node.GetAttributeValue("class", string.Empty).Contains("number test-follower-count"));
+                var followersCount = 0;
+                Int32.TryParse(followersCountNode.InnerText, out followersCount);
+
                 var avatarUrlNode = mainNode.Descendants("img").FirstOrDefault();
                 var avatarUri = new Uri(avatarUrlNode?.GetAttributeValue("src", string.Empty));
                 var nickNameNode = mainNode.Descendants("a").FirstOrDefault(node => node.GetAttributeValue("class", string.Empty) == "nick-name");
@@ -395,6 +419,12 @@ namespace MiiverseArchive.Context
 
                 var userNode = mainNode.Descendants("div").FirstOrDefault(node => node.GetAttributeValue("class", string.Empty) == "user-data");
                 var countryNode = userNode.Descendants("div").FirstOrDefault(node => node.GetAttributeValue("class", string.Empty).Equals("note"));
+
+                var bioNode = mainNode.Descendants("p").FirstOrDefault(node => node.GetAttributeValue("class", string.Empty).Contains("js-full-text"));
+                if (bioNode == null)
+                {
+                    bioNode = mainNode.Descendants("p").FirstOrDefault(node => node.GetAttributeValue("class", string.Empty).Contains("js-truncated-text"));
+                }
 
                 var birthdayNode = userNode.Descendants("div").FirstOrDefault(node => node.GetAttributeValue("class", string.Empty).Contains("birthday"));
 
@@ -422,7 +452,9 @@ namespace MiiverseArchive.Context
                 }
 
                 return new UserProfileResponse(new User(nickName, userName, avatarUri,
-                    countryNode?.InnerText, birthdayNode?.InnerText, gameSkill, systems, genres));
+                    countryNode?.InnerText, birthdayNode?.InnerText, gameSkill, systems, genres, 
+                    bioNode?.InnerText, (int)followersCount, (int)followingCount, friendCount, 
+                    (int)postCount, (int)empathyCount, sidebarImageUrl));
             });
         }
 

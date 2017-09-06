@@ -26,7 +26,7 @@ namespace MiiverseArchive.Entities.User
                 case BeginnerLevel:
                     return GameSkill.Beginner;
                 default:
-                    throw new Exception("Class name is invalid");
+                    return GameSkill.Hidden;
             }
         }
     }
