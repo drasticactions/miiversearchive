@@ -343,6 +343,66 @@ namespace MiiverseArchive.Context
 
         }
 
+        public Task<UserProfileFeedResponse> GetUserProfileFeedAsync(string username, UserProfileFeedType type, int offset = 0)
+        {
+            // The max per page is 50.
+            AccessCheck();
+
+            var baseUrl = $"https://miiverse.nintendo.net/users/{username}/";
+
+            switch (type)
+            {
+                case UserProfileFeedType.Followers:
+                    baseUrl += "followers";
+                    break;
+                case UserProfileFeedType.Following:
+                    baseUrl += "following";
+                    break;
+                case UserProfileFeedType.Friends:
+                    baseUrl += "friends";
+                    break;
+            }
+
+            if (offset > 0)
+            {
+                baseUrl += $"?offset={offset}";
+            }
+
+            var req = new HttpRequestMessage(HttpMethod.Get, baseUrl);
+            req.Headers.Add("X-Requested-With", "XMLHttpRequest");
+            return Client.SendAsync(req).ToTaskOfStream().ContinueWith(stream =>
+            {
+                var friendList = new List<string>();
+                var doc = new HtmlDocument();
+                doc.Load(stream.Result, System.Text.Encoding.UTF8);
+                try
+                {
+                    // NOTE: For the "friends" feed, it may contain people not on Miiverse.
+                    // We are only counting Miiverse friends, since those are the only ones we can
+                    // parse.
+                    var friendListNode = doc.GetElementbyId("friend-list-content");
+
+                    var friendFeedNodes = friendListNode.Descendants("li").Where(node => node.GetAttributeValue("data-href", string.Empty) != string.Empty);
+
+                    if (friendFeedNodes.Any())
+                    {
+                        foreach (var friendFeed in friendFeedNodes)
+                        {
+                            friendList.Add(friendFeed.GetAttributeValue("data-href", string.Empty).Replace("/users/", ""));
+                        }
+                    }
+                }
+                catch (Exception)
+                {
+                    // We are going to assume if this fails, that the list is empty.
+                    // Most liekly, this is the result of "user-page-no-content"
+                    Debug.WriteLine($"Failed to parse for {username}");
+                }
+
+                return new UserProfileFeedResponse(username, friendList, type);
+            });
+        }
+
         public Task<UserProfileResponse> GetUserProfileAsync(string username)
         {
             AccessCheck();

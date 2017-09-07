@@ -88,56 +88,60 @@ namespace MiiverseArchiveRedux
             Console.WriteLine("Parsing Test: Users List");
             Console.WriteLine("-----------");
             var gameList = ctx.GetCommunityGameListAsync(GameSearchList.All, GamePlatformSearch.Wiiu, 300).GetAwaiter().GetResult();
-            var userIds = File.ReadAllLines("miiverse_users.txt");
+            var friendList = await ctx.GetUserProfileFeedAsync("steph161", UserProfileFeedType.Friends);
+            var followerList = await ctx.GetUserProfileFeedAsync("steph161", UserProfileFeedType.Followers);
+            var FollowingList = await ctx.GetUserProfileFeedAsync("steph161", UserProfileFeedType.Following);
+            
+            //var userIds = File.ReadAllLines("miiverse_users.txt");
 
-            using (var db = new LiteDatabase("users.db"))
-            {
-                var users = db.GetCollection<User>("users");
-                var allUsers = users.Find(Query.All());
-                var startingCount = 0;
-                if (allUsers.Any())
-                {
-                    var userNames = allUsers.Select(n => n.ScreenName).ToList();
-                    startingCount = userNames.IndexOf(allUsers.Last().ScreenName) + 1;
-                }
+            //using (var db = new LiteDatabase("users.db"))
+            //{
+            //    var users = db.GetCollection<User>("users");
+            //    var allUsers = users.Find(Query.All());
+            //    var startingCount = 0;
+            //    if (allUsers.Any())
+            //    {
+            //        var userNames = allUsers.Select(n => n.ScreenName).ToList();
+            //        startingCount = userNames.IndexOf(allUsers.Last().ScreenName) + 1;
+            //    }
 
-                for (var i = startingCount; i <= userIds.Count(); i++)
-                {
-                    var userEntity = await ctx.GetUserProfileAsync(userIds[i]);
-                    Console.WriteLine("Name: {0}", userEntity.User.Name);
-                    Console.WriteLine("ScreenName: {0}", userEntity.User.ScreenName);
-                    Console.WriteLine("Following: {0}", userEntity.User.FollowingCount);
-                    Console.WriteLine("FollowerCount: {0}", userEntity.User.FollowerCount);
-                    Console.WriteLine("FriendsCount: {0}", userEntity.User.FriendsCount);
-                    Console.WriteLine("TotalPosts: {0}", userEntity.User.TotalPosts);
-                    Console.WriteLine("EmpathyCount: {0}", userEntity.User.EmpathyCount);
-                    Console.WriteLine("Bio: {0}", userEntity.User.Bio);
-                    Console.WriteLine("IconUri: {0}", userEntity.User.IconUri);
-                    Console.WriteLine("Country: {0}", userEntity.User.Country);
-                    Console.WriteLine("Birthday: {0}", userEntity.User.Birthday);
-                    Console.WriteLine("Birthday Hidden: {0}", userEntity.User.IsBirthdayHidden);
-                    Console.WriteLine("Sidebar Image: {0}", userEntity.User.SidebarCoverUrl);
-                    if (userEntity.User.GameSystem != null)
-                    {
-                        foreach (var gameSystem in userEntity.User.GameSystem)
-                        {
-                            Console.WriteLine("GameSystem: {0}", gameSystem);
-                        }
-                    }
-                    if (userEntity.User.FavoriteGameGenre != null)
-                    {
-                        foreach (var gameGenre in userEntity.User.FavoriteGameGenre)
-                        {
-                            Console.WriteLine("GameGenre: {0}", gameGenre);
-                        }
-                    }
-                    Console.WriteLine("GameSkill: {0}", userEntity.User.GameSkill);
-                    Console.WriteLine("-----------");
+            //    for (var i = startingCount; i <= userIds.Count(); i++)
+            //    {
+            //        var userEntity = await ctx.GetUserProfileAsync(userIds[i]);
+            //        Console.WriteLine("Name: {0}", userEntity.User.Name);
+            //        Console.WriteLine("ScreenName: {0}", userEntity.User.ScreenName);
+            //        Console.WriteLine("Following: {0}", userEntity.User.FollowingCount);
+            //        Console.WriteLine("FollowerCount: {0}", userEntity.User.FollowerCount);
+            //        Console.WriteLine("FriendsCount: {0}", userEntity.User.FriendsCount);
+            //        Console.WriteLine("TotalPosts: {0}", userEntity.User.TotalPosts);
+            //        Console.WriteLine("EmpathyCount: {0}", userEntity.User.EmpathyCount);
+            //        Console.WriteLine("Bio: {0}", userEntity.User.Bio);
+            //        Console.WriteLine("IconUri: {0}", userEntity.User.IconUri);
+            //        Console.WriteLine("Country: {0}", userEntity.User.Country);
+            //        Console.WriteLine("Birthday: {0}", userEntity.User.Birthday);
+            //        Console.WriteLine("Birthday Hidden: {0}", userEntity.User.IsBirthdayHidden);
+            //        Console.WriteLine("Sidebar Image: {0}", userEntity.User.SidebarCoverUrl);
+            //        if (userEntity.User.GameSystem != null)
+            //        {
+            //            foreach (var gameSystem in userEntity.User.GameSystem)
+            //            {
+            //                Console.WriteLine("GameSystem: {0}", gameSystem);
+            //            }
+            //        }
+            //        if (userEntity.User.FavoriteGameGenre != null)
+            //        {
+            //            foreach (var gameGenre in userEntity.User.FavoriteGameGenre)
+            //            {
+            //                Console.WriteLine("GameGenre: {0}", gameGenre);
+            //            }
+            //        }
+            //        Console.WriteLine("GameSkill: {0}", userEntity.User.GameSkill);
+            //        Console.WriteLine("-----------");
 
-                    userEntity.User.Id = i;
-                    users.Upsert(userEntity.User);
-                }
-            }
+            //        userEntity.User.Id = i;
+            //        users.Upsert(userEntity.User);
+            //    }
+            //}
             //var postTest = await ctx.GetPostAsync("AYIHAAAEAABEVRTp4iPDww");
             //var repliesTest = await ctx.GetPostResponse("AYIHAAAEAABEVRTp4iPDww", MiiverseArchive.Tools.Constants.WebApiType.Replies);
             //var gameTest = new Game("community-14866558073673172583", "Splatoon", "/titles/14866558073673172576/14866558073673172583", new Uri("https://d3esbfg30x759i.cloudfront.net/cnj/zlCfzTYBRmcD4DW6Q5"), "platform-tag-wiiu.png", "Wii U Games");
