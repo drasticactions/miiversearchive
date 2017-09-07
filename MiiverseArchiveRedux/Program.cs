@@ -12,6 +12,7 @@ using System.IO;
 using MiiverseArchive.Entities.Response;
 using Newtonsoft.Json;
 using MiiverseArchive.Entities.User;
+using MiiverseArchive.Context;
 
 namespace MiiverseArchiveRedux
 {
@@ -59,6 +60,23 @@ namespace MiiverseArchiveRedux
             }
         }
 
+        static async Task<UserProfileFeedResponse> GetFeed(MiiverseContext ctx, string screenname, UserProfileFeedType type)
+        {
+            var offset = 0;
+            var screennameList = new List<string>();
+            while (true)
+            {
+                var result = await ctx.GetUserProfileFeedAsync(screenname, type, offset);
+                screennameList.AddRange(result.ResultScreenNames);
+                if (!result.ResultScreenNames.Any() || type == UserProfileFeedType.Friends)
+                {
+                    return new UserProfileFeedResponse(screenname, screennameList, type);
+                }
+
+                offset += result.ResultScreenNames.Count();
+            }
+        }
+
         static async Task MainAsync()
         {
             var testing = DateTime.Now.AddDays(30).ToUnixTime();
@@ -88,11 +106,51 @@ namespace MiiverseArchiveRedux
             Console.WriteLine("Parsing Test: Users List");
             Console.WriteLine("-----------");
             var gameList = ctx.GetCommunityGameListAsync(GameSearchList.All, GamePlatformSearch.Wiiu, 300).GetAwaiter().GetResult();
-            var friendList = await ctx.GetUserProfileFeedAsync("steph161", UserProfileFeedType.Friends);
-            var followerList = await ctx.GetUserProfileFeedAsync("steph161", UserProfileFeedType.Followers);
-            var FollowingList = await ctx.GetUserProfileFeedAsync("steph161", UserProfileFeedType.Following);
-            
-            //var userIds = File.ReadAllLines("miiverse_users.txt");
+
+            var userIds = File.ReadAllLines("miiverse_users.txt");
+            using (var db = new LiteDatabase("friends.db"))
+            {
+                var users = db.GetCollection<UserFriend>("friends");
+                var allUsers = users.Find(Query.All());
+                var startingCount = 0;
+                if (allUsers.Any())
+                {
+                    var userNames = allUsers.Select(n => n.ScreenName).ToList();
+                    startingCount = userNames.IndexOf(allUsers.Last().ScreenName) + 1;
+                }
+                for (var i = startingCount; i <= userIds.Count(); i++)
+                {
+                    var user = userIds[i];
+                    var friendList = await GetFeed(ctx, user, UserProfileFeedType.Friends);
+                    Console.WriteLine($"{user} Friends: {friendList.ResultScreenNames.Count()}");
+
+                    var newFriendsList = friendList.ResultScreenNames.Where(n => !allUsers.Any(o => o.ProfileFeedType == UserProfileFeedType.Friends && o.ScreenName == user && o.AcquaintanceScreenName == n));
+                    foreach(var friend in newFriendsList)
+                    {
+                        users.Insert(new UserFriend(user, friend, UserProfileFeedType.Friends));
+                    }
+
+                    var followerList = await GetFeed(ctx, user, UserProfileFeedType.Followers);
+                    var newFollowersList = friendList.ResultScreenNames.Where(n => !allUsers.Any(o => o.ProfileFeedType == UserProfileFeedType.Followers && o.ScreenName == user && o.AcquaintanceScreenName == n));
+
+                    Console.WriteLine($"{user} Followers: {followerList.ResultScreenNames.Count()}");
+                    foreach (var friend in newFollowersList)
+                    {
+                        users.Insert(new UserFriend(user, friend, UserProfileFeedType.Followers));
+                    }
+
+                    var FollowingList = await GetFeed(ctx, user, UserProfileFeedType.Following);
+                    var newFollowingList = friendList.ResultScreenNames.Where(n => !allUsers.Any(o => o.ProfileFeedType == UserProfileFeedType.Following && o.ScreenName == user && o.AcquaintanceScreenName == n));
+
+                    Console.WriteLine($"{user} Following: {FollowingList.ResultScreenNames.Count()}");
+                    foreach (var friend in newFollowingList)
+                    {
+                        users.Insert(new UserFriend(user, friend, UserProfileFeedType.Following));
+                    }
+
+                }
+            }
+
 
             //using (var db = new LiteDatabase("users.db"))
             //{
