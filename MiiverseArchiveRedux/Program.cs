@@ -113,7 +113,7 @@ namespace MiiverseArchiveRedux
             using (var db = new LiteDatabase("friends.db"))
             {
                 var users = db.GetCollection<UserFriend>("friends");
-                var allUsers = users.Find(Query.All());
+                var allUsers = users.Find(Query.All()).ToList();
                 var startingCount = 0;
                 if (allUsers.Any() && !string.IsNullOrEmpty(username))
                 {
@@ -122,17 +122,19 @@ namespace MiiverseArchiveRedux
                 for (var i = startingCount; i <= userIds.Count(); i++)
                 {
                     var user = userIds[i];
+                    Console.WriteLine($"Getting Friends for {user}");
                     var friendList = await GetFeed(ctx, user, UserProfileFeedType.Friends);
                     Console.WriteLine($"{user} Friends: {friendList.ResultScreenNames.Count()}");
 
-                    var newFriendsList = friendList.ResultScreenNames.Where(n => !allUsers.Any(o => o.ProfileFeedType == UserProfileFeedType.Friends && o.ScreenName == user && o.AcquaintanceScreenName == n));
+                    var newFriendsList = friendList.ResultScreenNames.Where(n => !allUsers.Any(o => o.ProfileFeedType == UserProfileFeedType.Friends && o.ScreenName == user && o.AcquaintanceScreenName == n)).ToList();
                     foreach(var friend in newFriendsList)
                     {
                         users.Insert(new UserFriend(user, friend, UserProfileFeedType.Friends));
                     }
 
+                    Console.WriteLine($"Getting Followers for {user}");
                     var followerList = await GetFeed(ctx, user, UserProfileFeedType.Followers);
-                    var newFollowersList = followerList.ResultScreenNames.Where(n => !allUsers.Any(o => o.ProfileFeedType == UserProfileFeedType.Followers && o.ScreenName == user && o.AcquaintanceScreenName == n));
+                    var newFollowersList = followerList.ResultScreenNames.Where(n => !allUsers.Any(o => o.ProfileFeedType == UserProfileFeedType.Followers && o.ScreenName == user && o.AcquaintanceScreenName == n)).ToList();
 
                     Console.WriteLine($"{user} Followers: {followerList.ResultScreenNames.Count()}");
                     foreach (var friend in newFollowersList)
@@ -140,8 +142,9 @@ namespace MiiverseArchiveRedux
                         users.Insert(new UserFriend(user, friend, UserProfileFeedType.Followers));
                     }
 
+                    Console.WriteLine($"Getting Following for {user}");
                     var FollowingList = await GetFeed(ctx, user, UserProfileFeedType.Following);
-                    var newFollowingList = FollowingList.ResultScreenNames.Where(n => !allUsers.Any(o => o.ProfileFeedType == UserProfileFeedType.Following && o.ScreenName == user && o.AcquaintanceScreenName == n));
+                    var newFollowingList = FollowingList.ResultScreenNames.Where(n => !allUsers.Any(o => o.ProfileFeedType == UserProfileFeedType.Following && o.ScreenName == user && o.AcquaintanceScreenName == n)).ToList();
 
                     Console.WriteLine($"{user} Following: {FollowingList.ResultScreenNames.Count()}");
                     foreach (var friend in newFollowingList)

@@ -51,7 +51,7 @@ namespace MiiverseArchive.Context
 
         }
 
-        public Task<WebApiResponse> GetPostResponse(string postId, WebApiType type, double lastPostTime = 0, double currentDate = 0)
+        public async Task<WebApiResponse> GetPostResponse(string postId, WebApiType type, double lastPostTime = 0, double currentDate = 0)
         {
             AccessCheck();
 
@@ -79,10 +79,12 @@ namespace MiiverseArchive.Context
 
             var req = new HttpRequestMessage(HttpMethod.Get, baseUrl);
             req.Headers.Add("X-Requested-With", "XMLHttpRequest");
-            return Client.SendAsync(req).ToTaskOfStream().ContinueWith(stream =>
+
+            using (var result = await Client.SendAsync(req))
+            using(var content = await result.Content.ReadAsStreamAsync())
             {
                 var doc = new HtmlDocument();
-                doc.Load(stream.Result, System.Text.Encoding.UTF8);
+                doc.Load(content, System.Text.Encoding.UTF8);
 
                 var posts = new List<Post>();
 
@@ -103,10 +105,10 @@ namespace MiiverseArchive.Context
                 }
 
                 return new WebApiResponse(currentDate, postTime, posts);
-            });
+            }
         }
 
-        public Task<WebApiResponse> GetWebApiResponse(Game game, WebApiType type, double lastPostTime = 0, double currentDate = 0)
+        public async Task<WebApiResponse> GetWebApiResponse(Game game, WebApiType type, double lastPostTime = 0, double currentDate = 0)
         {
             AccessCheck();
 
@@ -154,10 +156,11 @@ namespace MiiverseArchive.Context
 
             var req = new HttpRequestMessage(HttpMethod.Get, baseUrl);
             req.Headers.Add("X-Requested-With", "XMLHttpRequest");
-            return Client.SendAsync(req).ToTaskOfStream().ContinueWith(stream =>
+            using (var result = await Client.SendAsync(req))
+            using (var content = await result.Content.ReadAsStreamAsync())
             {
                 var doc = new HtmlDocument();
-                doc.Load(stream.Result, System.Text.Encoding.UTF8);
+                doc.Load(content, System.Text.Encoding.UTF8);
 
                 var posts = ParsePosts(type, doc);
                 double postTime = 0;
@@ -167,7 +170,7 @@ namespace MiiverseArchive.Context
                 }
 
                 return new WebApiResponse(currentDate, postTime, posts);
-            });
+            }
         }
 
         private List<Post> ParsePosts(WebApiType type, HtmlDocument doc)
@@ -206,7 +209,7 @@ namespace MiiverseArchive.Context
 
 
 
-        public Task<GameResponse> GetGameAsync(Game game, string nextPageUrl = "")
+        public async Task<GameResponse> GetGameAsync(Game game, string nextPageUrl = "")
         {
             AccessCheck();
 
@@ -222,10 +225,12 @@ namespace MiiverseArchive.Context
 
             var req = new HttpRequestMessage(HttpMethod.Get, baseUrl);
             req.Headers.Add("X-Requested-With", "XMLHttpRequest");
-            return Client.SendAsync(req).ToTaskOfStream().ContinueWith(stream =>
+
+            using (var result = await Client.SendAsync(req))
+            using (var content = await result.Content.ReadAsStreamAsync())
             {
                 var doc = new HtmlDocument();
-                doc.Load(stream.Result, System.Text.Encoding.UTF8);
+                doc.Load(content, System.Text.Encoding.UTF8);
 
                 var favoriteButton =
                     doc.DocumentNode.Descendants("button")
@@ -246,10 +251,10 @@ namespace MiiverseArchive.Context
                 //   var postNodes = postListNode?.ChildNodes.Where(n => n.HasClassName("post") && !n.HasClassName("none"));
                 var posts = new List<Post>();
                 return new GameResponse(canPost, isFavorite, "", postListNode != null, posts);
-            });
+            }
         }
 
-        public Task<CommunityListResponse> GetCommunityGameListAsync(GameSearchList searchOption, GamePlatformSearch platformSearch, int offset)
+        public async Task<CommunityListResponse> GetCommunityGameListAsync(GameSearchList searchOption, GamePlatformSearch platformSearch, int offset)
         {
             AccessCheck();
 
@@ -282,10 +287,11 @@ namespace MiiverseArchive.Context
 
             var req = new HttpRequestMessage(HttpMethod.Get, baseUrl);
             req.Headers.Add("X-Requested-With", "XMLHttpRequest");
-            return Client.SendAsync(req).ToTaskOfStream().ContinueWith(stream =>
+            using (var result = await Client.SendAsync(req))
+            using (var content = await result.Content.ReadAsStreamAsync())
             {
                 var doc = new HtmlDocument();
-                doc.Load(stream.Result, System.Text.Encoding.UTF8);
+                doc.Load(content, System.Text.Encoding.UTF8);
                 var gameListNode =
                     doc.DocumentNode.Descendants("ul")
                         .FirstOrDefault(
@@ -339,11 +345,11 @@ namespace MiiverseArchive.Context
                     }
                 }
                 return new CommunityListResponse(output);
-            });
+            }
 
         }
 
-        public Task<UserProfileFeedResponse> GetUserProfileFeedAsync(string username, UserProfileFeedType type, int offset = 0)
+        public async Task<UserProfileFeedResponse> GetUserProfileFeedAsync(string username, UserProfileFeedType type, int offset = 0)
         {
             // The max per page is 50.
             AccessCheck();
@@ -370,11 +376,13 @@ namespace MiiverseArchive.Context
 
             var req = new HttpRequestMessage(HttpMethod.Get, baseUrl);
             req.Headers.Add("X-Requested-With", "XMLHttpRequest");
-            return Client.SendAsync(req).ToTaskOfStream().ContinueWith(stream =>
+
+            using (var result = await Client.SendAsync(req))
+            using (var content = await result.Content.ReadAsStreamAsync())
             {
                 var friendList = new List<string>();
                 var doc = new HtmlDocument();
-                doc.Load(stream.Result, System.Text.Encoding.UTF8);
+                doc.Load(content, System.Text.Encoding.UTF8);
                 try
                 {
                     // NOTE: For the "friends" feed, it may contain people not on Miiverse.
@@ -400,19 +408,20 @@ namespace MiiverseArchive.Context
                 }
 
                 return new UserProfileFeedResponse(username, friendList, type);
-            });
+            }
         }
 
-        public Task<UserProfileResponse> GetUserProfileAsync(string username)
+        public async Task<UserProfileResponse> GetUserProfileAsync(string username)
         {
             AccessCheck();
 
             var req = new HttpRequestMessage(HttpMethod.Get, "https://miiverse.nintendo.net/users/" + username);
             req.Headers.Add("X-Requested-With", "XMLHttpRequest");
-            return Client.SendAsync(req).ToTaskOfStream().ContinueWith(stream =>
+            using (var result = await Client.SendAsync(req))
+            using (var content = await result.Content.ReadAsStreamAsync())
             {
                 var doc = new HtmlDocument();
-                doc.Load(stream.Result, System.Text.Encoding.UTF8);
+                doc.Load(content, System.Text.Encoding.UTF8);
                 var mainNode = doc.GetElementbyId("main-body");
 
                 if (mainNode == null)
@@ -512,47 +521,49 @@ namespace MiiverseArchive.Context
                 }
 
                 return new UserProfileResponse(new User(nickName, userName, avatarUri,
-                    countryNode?.InnerText, birthdayNode?.InnerText, gameSkill, systems, genres, 
-                    bioNode?.InnerText, (int)followersCount, (int)followingCount, friendCount, 
+                    countryNode?.InnerText, birthdayNode?.InnerText, gameSkill, systems, genres,
+                    bioNode?.InnerText, (int)followersCount, (int)followingCount, friendCount,
                     (int)postCount, (int)empathyCount, sidebarImageUrl));
-            });
+            }
         }
 
-        public Task<PostResponse> GetPostAsync(string id)
+        public async Task<PostResponse> GetPostAsync(string id)
         {
             AccessCheck();
 
             var req = new HttpRequestMessage(HttpMethod.Get, "https://miiverse.nintendo.net/posts/" + id);
             req.Headers.Add("X-Requested-With", "XMLHttpRequest");
-            return Client.SendAsync(req).ToTaskOfStream().ContinueWith(stream =>
+            using (var result = await Client.SendAsync(req))
+            using (var content = await result.Content.ReadAsStreamAsync())
             {
                 var doc = new HtmlDocument();
-                doc.Load(stream.Result, System.Text.Encoding.UTF8);
+                doc.Load(content, System.Text.Encoding.UTF8);
                 var postNode = doc.GetElementbyId("post-content");
                 var post = ParsePost(postNode);
                 return new PostResponse(post);
-            });
+            }
         }
 
-        public Task<UserFeedResponse> GetUserFeedAsync(string username)
+        public async Task<UserFeedResponse> GetUserFeedAsync(string username)
         {
             AccessCheck();
 
             var req = new HttpRequestMessage(HttpMethod.Get, $"https://miiverse.nintendo.net/users/{username}/posts");
             req.Headers.Add("X-Requested-With", "XMLHttpRequest");
-            return Client.SendAsync(req).ToTaskOfStream().ContinueWith(stream =>
+            using (var result = await Client.SendAsync(req))
+            using (var content = await result.Content.ReadAsStreamAsync())
             {
                 var doc = new HtmlDocument();
-                doc.Load(stream.Result, System.Text.Encoding.UTF8);
+                doc.Load(content, System.Text.Encoding.UTF8);
 
                 var mainBody = doc.GetElementbyId("main-body");
                 var postList = mainBody.Descendants("div").Where(node => node.GetAttributeValue("id", string.Empty).Contains("post-"));
                 var posts = postList.Select(ParsePost).ToList();
                 return new UserFeedResponse(posts);
-            });
+            }
         }
 
-        public Task<ActivityResponse> GetActivityAsync(bool friendsOnly = false)
+        public async Task<ActivityResponse> GetActivityAsync(bool friendsOnly = false)
         {
             AccessCheck();
             var url = "https://miiverse.nintendo.net/activity?fragment=activityfeed";
@@ -562,15 +573,16 @@ namespace MiiverseArchive.Context
             }
             var req = new HttpRequestMessage(HttpMethod.Get, url);
             req.Headers.Add("X-Requested-With", "XMLHttpRequest");
-            return Client.SendAsync(req).ToTaskOfStream().ContinueWith(stream =>
+            using (var result = await Client.SendAsync(req))
+            using (var content = await result.Content.ReadAsStreamAsync())
             {
                 var doc = new HtmlDocument();
-                doc.Load(stream.Result, System.Text.Encoding.UTF8);
+                doc.Load(content, System.Text.Encoding.UTF8);
 
                 var postsNode = doc.GetElementbyId("main-body").GetElementByClassName("post-list").ChildNodes.Where(n => n.HasClassName("post") && !n.HasClassName("none"));
                 var posts = postsNode.Select(ParsePost).ToList();
                 return new ActivityResponse(posts);
-            });
+            }
         }
 
         public Task SignOutAsync()
