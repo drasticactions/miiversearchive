@@ -18,9 +18,9 @@ namespace MiiverseArchiveRedux
 {
     class Program
     {
-        static void Main()
+        static void Main(string[] args)
         {
-            MainAsync().GetAwaiter().GetResult();
+            MainAsync(args).GetAwaiter().GetResult();
             //DownloadAsync().GetAwaiter().GetResult();
         }
 
@@ -66,6 +66,7 @@ namespace MiiverseArchiveRedux
             var screennameList = new List<string>();
             while (true)
             {
+                Console.WriteLine($"Offset - {offset}");
                 var result = await ctx.GetUserProfileFeedAsync(screenname, type, offset);
                 screennameList.AddRange(result.ResultScreenNames);
                 if (!result.ResultScreenNames.Any() || type == UserProfileFeedType.Friends)
@@ -77,8 +78,9 @@ namespace MiiverseArchiveRedux
             }
         }
 
-        static async Task MainAsync()
+        static async Task MainAsync(string[] args)
         {
+            var username = args.Length > 0 ? args[0] : "";
             var testing = DateTime.Now.AddDays(30).ToUnixTime();
             var oauthClient = new MiiverseOAuthClient();
             var token = oauthClient.GetTokenAsync().GetAwaiter().GetResult();
@@ -107,16 +109,15 @@ namespace MiiverseArchiveRedux
             Console.WriteLine("-----------");
             var gameList = ctx.GetCommunityGameListAsync(GameSearchList.All, GamePlatformSearch.Wiiu, 300).GetAwaiter().GetResult();
 
-            var userIds = File.ReadAllLines("miiverse_users.txt");
+            var userIds = File.ReadAllLines("miiverse_users.txt").ToList();
             using (var db = new LiteDatabase("friends.db"))
             {
                 var users = db.GetCollection<UserFriend>("friends");
                 var allUsers = users.Find(Query.All());
                 var startingCount = 0;
-                if (allUsers.Any())
+                if (allUsers.Any() && !string.IsNullOrEmpty(username))
                 {
-                    var userNames = allUsers.Select(n => n.ScreenName).ToList();
-                    startingCount = userNames.IndexOf(allUsers.Last().ScreenName) + 1;
+                    startingCount = userIds.IndexOf(username);
                 }
                 for (var i = startingCount; i <= userIds.Count(); i++)
                 {
@@ -131,7 +132,7 @@ namespace MiiverseArchiveRedux
                     }
 
                     var followerList = await GetFeed(ctx, user, UserProfileFeedType.Followers);
-                    var newFollowersList = friendList.ResultScreenNames.Where(n => !allUsers.Any(o => o.ProfileFeedType == UserProfileFeedType.Followers && o.ScreenName == user && o.AcquaintanceScreenName == n));
+                    var newFollowersList = followerList.ResultScreenNames.Where(n => !allUsers.Any(o => o.ProfileFeedType == UserProfileFeedType.Followers && o.ScreenName == user && o.AcquaintanceScreenName == n));
 
                     Console.WriteLine($"{user} Followers: {followerList.ResultScreenNames.Count()}");
                     foreach (var friend in newFollowersList)
@@ -140,7 +141,7 @@ namespace MiiverseArchiveRedux
                     }
 
                     var FollowingList = await GetFeed(ctx, user, UserProfileFeedType.Following);
-                    var newFollowingList = friendList.ResultScreenNames.Where(n => !allUsers.Any(o => o.ProfileFeedType == UserProfileFeedType.Following && o.ScreenName == user && o.AcquaintanceScreenName == n));
+                    var newFollowingList = FollowingList.ResultScreenNames.Where(n => !allUsers.Any(o => o.ProfileFeedType == UserProfileFeedType.Following && o.ScreenName == user && o.AcquaintanceScreenName == n));
 
                     Console.WriteLine($"{user} Following: {FollowingList.ResultScreenNames.Count()}");
                     foreach (var friend in newFollowingList)
