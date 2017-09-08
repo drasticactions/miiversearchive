@@ -103,70 +103,112 @@ namespace MiiverseArchiveRedux
             // Hardcoding this for testing...
             Console.WriteLine("-----------");
 
+            
+
             using (var db = new LiteDatabase("gamelist.db"))
             {
                 var posts = db.GetCollection<Game>("gamelist");
-                var allPosts = posts.Find(Query.All());
-                var offset = 0;
+                var allPosts = posts.Find(Query.All()).ToList();
+                var allPostsTip = allPosts.Where(node => node.IconUri.ToString().Contains("/tip/")).Count();
+                var postIndex = allPosts.IndexOf(allPosts.First(n => n.Title == "Excave III : Tower of Destiny"));
 
-                Console.WriteLine("Getting Nintendo3DS Game List");
-                while (true)
-                {
-                    var communityList = await ctx.GetCommunityGameListAsync(GameSearchList.All, GamePlatformSearch.Nintendo3ds, offset);
-                    if (communityList.Games == null)
-                    {
-                        // We're done! Time to wrap it up.
-                        break;
-                    }
+                // New, Parallel, l337 way!
 
-                    foreach (var game in communityList.Games)
+                Parallel.For(2000, allPosts.Count(), index => {
+                    var game = allPosts[index];
+                    Console.WriteLine($"{game.Title}");
+                    using (var webClient = new WebClient())
                     {
-                        var test = posts.FindById(game.Id);
-                        if (test == null)
+                        if (game.CommunityListIcon != null)
                         {
-                            game.ViewRegion = viewRegion;
-                            posts.Insert(game);
+                            Directory.CreateDirectory($"{game.CommunityListIcon.Segments[1]}");
+                            webClient.DownloadFile(game.CommunityListIcon, $"{game.CommunityListIcon.Segments[1]}" + Path.GetFileName(game.CommunityListIcon.ToString()) + ".png");
                         }
-                        else
-                        {
-                            // Game exists in database, so say that it's a world release.
-                            game.ViewRegion = ViewRegion.World;
-                            posts.Upsert(game);
-                        }
-                    }
-                    Console.WriteLine($"{posts.Count()}");
-                    offset = offset + 30;
-                }
 
-                Console.WriteLine("Getting WiiU Game List");
-                while (true)
-                {
-                    var communityList = await ctx.GetCommunityGameListAsync(GameSearchList.All, GamePlatformSearch.Wiiu, offset);
-                    if (communityList.Games == null)
-                    {
-                        // We're done! Time to wrap it up.
-                        break;
+                        Directory.CreateDirectory($"{game.IconUri.Segments[1]}");
+                        webClient.DownloadFile(game.IconUri, $"{game.IconUri.Segments[1]}" + Path.GetFileName(game.IconUri.ToString()) + ".png");
                     }
+                }); 
 
-                    foreach (var game in communityList.Games)
-                    {
-                        var test = posts.FindById(game.Id);
-                        if (test == null)
-                        {
-                            game.ViewRegion = viewRegion;
-                            posts.Insert(game);
-                        }
-                        else
-                        {
-                            // Game exists in database, so say that it's a world release.
-                            game.ViewRegion = ViewRegion.World;
-                            posts.Upsert(game);
-                        }
-                    }
-                    Console.WriteLine($"{posts.Count()}");
-                    offset = offset + 30;
-                }
+                // Old, terrible way
+                //foreach (var game in allPosts)
+                //{
+                //    Console.WriteLine($"{game.Title}");
+                //    if (game.CommunityListIcon != null)
+                //    {
+                //        Directory.CreateDirectory($"{game.CommunityListIcon.Segments[1]}");
+                //        webClient.DownloadFile(game.CommunityListIcon, $"{game.CommunityListIcon.Segments[1]}" + Path.GetFileName(game.CommunityListIcon.ToString()) + ".png");
+                //    }
+
+                //    Directory.CreateDirectory($"{game.IconUri.Segments[1]}");
+                //    webClient.DownloadFile(game.IconUri, $"{game.IconUri.Segments[1]}" + Path.GetFileName(game.IconUri.ToString()) + ".png");
+                //}
             }
+
+            //using (var db = new LiteDatabase("gamelist.db"))
+            //{
+            //    var posts = db.GetCollection<Game>("gamelist");
+            //    var allPosts = posts.Find(Query.All());
+            //    var offset = 0;
+
+                //    Console.WriteLine("Getting Nintendo3DS Game List");
+                //    while (true)
+                //    {
+                //        var communityList = await ctx.GetCommunityGameListAsync(GameSearchList.All, GamePlatformSearch.Nintendo3ds, offset);
+                //        if (communityList.Games == null)
+                //        {
+                //            // We're done! Time to wrap it up.
+                //            break;
+                //        }
+
+                //        foreach (var game in communityList.Games)
+                //        {
+                //            var test = posts.FindById(game.Id);
+                //            if (test == null)
+                //            {
+                //                game.ViewRegion = viewRegion;
+                //                posts.Insert(game);
+                //            }
+                //            else
+                //            {
+                //                // Game exists in database, so say that it's a world release.
+                //                game.ViewRegion = ViewRegion.World;
+                //                posts.Upsert(game);
+                //            }
+                //        }
+                //        Console.WriteLine($"{posts.Count()}");
+                //        offset = offset + 30;
+                //    }
+
+                //    Console.WriteLine("Getting WiiU Game List");
+                //    while (true)
+                //    {
+                //        var communityList = await ctx.GetCommunityGameListAsync(GameSearchList.All, GamePlatformSearch.Wiiu, offset);
+                //        if (communityList.Games == null)
+                //        {
+                //            // We're done! Time to wrap it up.
+                //            break;
+                //        }
+
+                //        foreach (var game in communityList.Games)
+                //        {
+                //            var test = posts.FindById(game.Id);
+                //            if (test == null)
+                //            {
+                //                game.ViewRegion = viewRegion;
+                //                posts.Insert(game);
+                //            }
+                //            else
+                //            {
+                //                // Game exists in database, so say that it's a world release.
+                //                game.ViewRegion = ViewRegion.World;
+                //                posts.Upsert(game);
+                //            }
+                //        }
+                //        Console.WriteLine($"{posts.Count()}");
+                //        offset = offset + 30;
+                //    }
+                //}
         }
 
         #region Helpers
