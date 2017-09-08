@@ -80,8 +80,6 @@ namespace MiiverseArchiveRedux
 
         static async Task MainAsync(string[] args)
         {
-            var username = args.Length > 0 ? args[0] : "";
-            var testing = DateTime.Now.AddDays(30).ToUnixTime();
             var oauthClient = new MiiverseOAuthClient();
             var token = oauthClient.GetTokenAsync().GetAwaiter().GetResult();
             Console.WriteLine("client_id:\t{0}", token.ClientID);
@@ -97,116 +95,78 @@ namespace MiiverseArchiveRedux
             var password = GetPassword();
             Console.WriteLine("");
             Console.WriteLine("-----------");
+            var viewRegion = ViewRegion.America;
 
-            var ctx = oauthClient.Authorize(token, new NintendoNetworkAuthenticationToken(userName, password), "en-US", ViewRegion.Japan).GetAwaiter().GetResult();
+            var ctx = oauthClient.Authorize(token, new NintendoNetworkAuthenticationToken(userName, password), "en-US", viewRegion).GetAwaiter().GetResult();
 
             // TODO: Figure out a way to automate archiving game/user data.
             // Hardcoding this for testing...
             Console.WriteLine("-----------");
-            //Console.WriteLine("Archiving: Splatoon (Drawing)");
-            //Console.WriteLine("Archiving: Game Lists");
-            Console.WriteLine("Parsing Test: Users List");
-            Console.WriteLine("-----------");
-            var gameList = ctx.GetCommunityGameListAsync(GameSearchList.All, GamePlatformSearch.Wiiu, 300).GetAwaiter().GetResult();
 
-            var userIds = File.ReadAllLines("miiverse_users.txt").ToList();
-            using (var db = new LiteDatabase("friends.db"))
+            using (var db = new LiteDatabase("gamelist.db"))
             {
-                var users = db.GetCollection<UserFriend>("friends");
-                var allUsers = users.Find(Query.All()).ToList();
-                var startingCount = 0;
-                if (allUsers.Any() && !string.IsNullOrEmpty(username))
+                var posts = db.GetCollection<Game>("gamelist");
+                var allPosts = posts.Find(Query.All());
+                var offset = 0;
+
+                Console.WriteLine("Getting Nintendo3DS Game List");
+                while (true)
                 {
-                    startingCount = userIds.IndexOf(username);
+                    var communityList = await ctx.GetCommunityGameListAsync(GameSearchList.All, GamePlatformSearch.Nintendo3ds, offset);
+                    if (communityList.Games == null)
+                    {
+                        // We're done! Time to wrap it up.
+                        break;
+                    }
+
+                    foreach (var game in communityList.Games)
+                    {
+                        var test = posts.FindById(game.Id);
+                        if (test == null)
+                        {
+                            game.ViewRegion = viewRegion;
+                            posts.Insert(game);
+                        }
+                        else
+                        {
+                            // Game exists in database, so say that it's a world release.
+                            game.ViewRegion = ViewRegion.World;
+                            posts.Upsert(game);
+                        }
+                    }
+                    Console.WriteLine($"{posts.Count()}");
+                    offset = offset + 30;
                 }
-                for (var i = startingCount; i <= userIds.Count(); i++)
+
+                Console.WriteLine("Getting WiiU Game List");
+                while (true)
                 {
-                    var user = userIds[i];
-                    Console.WriteLine($"Getting Friends for {user}");
-                    var friendList = await GetFeed(ctx, user, UserProfileFeedType.Friends);
-                    Console.WriteLine($"{user} Friends: {friendList.ResultScreenNames.Count()}");
-
-                    var newFriendsList = friendList.ResultScreenNames.Where(n => !allUsers.Any(o => o.ProfileFeedType == UserProfileFeedType.Friends && o.ScreenName == user && o.AcquaintanceScreenName == n)).ToList();
-                    foreach(var friend in newFriendsList)
+                    var communityList = await ctx.GetCommunityGameListAsync(GameSearchList.All, GamePlatformSearch.Wiiu, offset);
+                    if (communityList.Games == null)
                     {
-                        users.Insert(new UserFriend(user, friend, UserProfileFeedType.Friends));
+                        // We're done! Time to wrap it up.
+                        break;
                     }
 
-                    Console.WriteLine($"Getting Followers for {user}");
-                    var followerList = await GetFeed(ctx, user, UserProfileFeedType.Followers);
-                    var newFollowersList = followerList.ResultScreenNames.Where(n => !allUsers.Any(o => o.ProfileFeedType == UserProfileFeedType.Followers && o.ScreenName == user && o.AcquaintanceScreenName == n)).ToList();
-
-                    Console.WriteLine($"{user} Followers: {followerList.ResultScreenNames.Count()}");
-                    foreach (var friend in newFollowersList)
+                    foreach (var game in communityList.Games)
                     {
-                        users.Insert(new UserFriend(user, friend, UserProfileFeedType.Followers));
+                        var test = posts.FindById(game.Id);
+                        if (test == null)
+                        {
+                            game.ViewRegion = viewRegion;
+                            posts.Insert(game);
+                        }
+                        else
+                        {
+                            // Game exists in database, so say that it's a world release.
+                            game.ViewRegion = ViewRegion.World;
+                            posts.Upsert(game);
+                        }
                     }
-
-                    Console.WriteLine($"Getting Following for {user}");
-                    var FollowingList = await GetFeed(ctx, user, UserProfileFeedType.Following);
-                    var newFollowingList = FollowingList.ResultScreenNames.Where(n => !allUsers.Any(o => o.ProfileFeedType == UserProfileFeedType.Following && o.ScreenName == user && o.AcquaintanceScreenName == n)).ToList();
-
-                    Console.WriteLine($"{user} Following: {FollowingList.ResultScreenNames.Count()}");
-                    foreach (var friend in newFollowingList)
-                    {
-                        users.Insert(new UserFriend(user, friend, UserProfileFeedType.Following));
-                    }
-
+                    Console.WriteLine($"{posts.Count()}");
+                    offset = offset + 30;
                 }
             }
-
-
-            //using (var db = new LiteDatabase("users.db"))
-            //{
-            //    var users = db.GetCollection<User>("users");
-            //    var allUsers = users.Find(Query.All());
-            //    var startingCount = 0;
-            //    if (allUsers.Any())
-            //    {
-            //        var userNames = allUsers.Select(n => n.ScreenName).ToList();
-            //        startingCount = userNames.IndexOf(allUsers.Last().ScreenName) + 1;
-            //    }
-
-            //    for (var i = startingCount; i <= userIds.Count(); i++)
-            //    {
-            //        var userEntity = await ctx.GetUserProfileAsync(userIds[i]);
-            //        Console.WriteLine("Name: {0}", userEntity.User.Name);
-            //        Console.WriteLine("ScreenName: {0}", userEntity.User.ScreenName);
-            //        Console.WriteLine("Following: {0}", userEntity.User.FollowingCount);
-            //        Console.WriteLine("FollowerCount: {0}", userEntity.User.FollowerCount);
-            //        Console.WriteLine("FriendsCount: {0}", userEntity.User.FriendsCount);
-            //        Console.WriteLine("TotalPosts: {0}", userEntity.User.TotalPosts);
-            //        Console.WriteLine("EmpathyCount: {0}", userEntity.User.EmpathyCount);
-            //        Console.WriteLine("Bio: {0}", userEntity.User.Bio);
-            //        Console.WriteLine("IconUri: {0}", userEntity.User.IconUri);
-            //        Console.WriteLine("Country: {0}", userEntity.User.Country);
-            //        Console.WriteLine("Birthday: {0}", userEntity.User.Birthday);
-            //        Console.WriteLine("Birthday Hidden: {0}", userEntity.User.IsBirthdayHidden);
-            //        Console.WriteLine("Sidebar Image: {0}", userEntity.User.SidebarCoverUrl);
-            //        if (userEntity.User.GameSystem != null)
-            //        {
-            //            foreach (var gameSystem in userEntity.User.GameSystem)
-            //            {
-            //                Console.WriteLine("GameSystem: {0}", gameSystem);
-            //            }
-            //        }
-            //        if (userEntity.User.FavoriteGameGenre != null)
-            //        {
-            //            foreach (var gameGenre in userEntity.User.FavoriteGameGenre)
-            //            {
-            //                Console.WriteLine("GameGenre: {0}", gameGenre);
-            //            }
-            //        }
-            //        Console.WriteLine("GameSkill: {0}", userEntity.User.GameSkill);
-            //        Console.WriteLine("-----------");
-
-            //        userEntity.User.Id = i;
-            //        users.Upsert(userEntity.User);
-            //    }
-            //}
-            //var postTest = await ctx.GetPostAsync("AYIHAAAEAABEVRTp4iPDww");
-            //var repliesTest = await ctx.GetPostResponse("AYIHAAAEAABEVRTp4iPDww", MiiverseArchive.Tools.Constants.WebApiType.Replies);
-            //var gameTest = new Game("community-14866558073673172583", "Splatoon", "/titles/14866558073673172576/14866558073673172583", new Uri("https://d3esbfg30x759i.cloudfront.net/cnj/zlCfzTYBRmcD4DW6Q5"), "platform-tag-wiiu.png", "Wii U Games");
         }
 
         #region Helpers

@@ -6,10 +6,11 @@ using System.Threading.Tasks;
 
 namespace MiiverseArchive.Entities.Response
 {
-    public static class ViewRegion
+    public enum ViewRegion
     {
-        public const int Japan = 1;
-        public const int America = 2;
-        public const int Europe = 4;
+        Japan = 1,
+        America = 2,
+        Europe = 4,
+        World = 5
     }
 }

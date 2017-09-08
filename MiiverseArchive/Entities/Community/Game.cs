@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MiiverseArchive.Entities.Response;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -47,5 +48,7 @@ namespace MiiverseArchive.Entities.Community
         public Platform Platform { get; set; }
 
         public string Type { get; set; }
+
+        public ViewRegion ViewRegion { get; set; }
     }
 }

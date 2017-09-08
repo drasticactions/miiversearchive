@@ -59,7 +59,7 @@ namespace MiiverseArchive.Managers
             });
         }
 
-        public Task<MiiverseContext> Authorize(NintendoNetworkSessionToken sessionToken, NintendoNetworkAuthenticationToken authenticationToken, string language = "en-US", int region = ViewRegion.America)
+        public Task<MiiverseContext> Authorize(NintendoNetworkSessionToken sessionToken, NintendoNetworkAuthenticationToken authenticationToken, string language = "en-US", ViewRegion region = ViewRegion.America)
         {
             // TODO: Handle authentication errors (bad passwords, network down) better.
             try

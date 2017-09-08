@@ -21,7 +21,7 @@ namespace MiiverseArchive.Context
     {
         private bool _isEnabled = true;
 
-        public MiiverseContext(string userName, string clientID, string sessionValue, string language = "en-US", int region = ViewRegion.America)
+        public MiiverseContext(string userName, string clientID, string sessionValue, string language = "en-US", ViewRegion region = ViewRegion.America)
         {
             UserName = userName;
             ClientID = clientID;
@@ -40,7 +40,7 @@ namespace MiiverseArchive.Context
                 Secure = true,
                 HttpOnly = true,
             });
-            handler.CookieContainer.Add(MiiverseConstantValues.MIIVERSE_DOMAIN_URI, new Cookie("view_region_id", region.ToString(), "/", MiiverseConstantValues.MIIVERSE_DOMAIN)
+            handler.CookieContainer.Add(MiiverseConstantValues.MIIVERSE_DOMAIN_URI, new Cookie("view_region_id", ((int)region).ToString(), "/", MiiverseConstantValues.MIIVERSE_DOMAIN)
             {
                 Secure = true,
                 HttpOnly = true,
