@@ -665,6 +665,12 @@ namespace MiiverseArchive.Context
                 return new Post(id, true);
             }
 
+            var isHiddenNode = postContentNode.Descendants("p").Where(n => n.GetAttributeValue("class", string.Empty).Contains("hidden")).FirstOrDefault();
+            if (isHiddenNode != null)
+            {
+                return new Post(id, true);
+            }
+
             uint replyCount = 0;
             if (!isReply)
             {
