@@ -43,18 +43,17 @@ namespace MiiverseArchiveRedux
             {
                 try
                 {
-                    if (!File.Exists($"images\\{post.ID}.png"))
+                    var filepath = $"{post.ImageUri.Segments[1]}{Path.GetFileName(post.ImageUri.ToString())}.png";
+                    if (!File.Exists(filepath))
                     {
                         Console.WriteLine($"Downloading {post.ID}.png");
-                        webClient.DownloadFile(post.ImageUri, $"images\\{post.ID}.png");
-                    }
-                    else
-                    {
-                        //Console.WriteLine($"images\\{post.ID}.png exists!");
+                        Directory.CreateDirectory($"{post.ImageUri.Segments[1]}");
+                        webClient.DownloadFile(post.ImageUri, filepath);
                     }
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
+                    // If we fail, append to failed.txt
                     File.AppendAllText("failed.txt", post.ImageUri.ToString() + Environment.NewLine);
                 }
             }
@@ -103,112 +102,212 @@ namespace MiiverseArchiveRedux
             // Hardcoding this for testing...
             Console.WriteLine("-----------");
 
-            
-
-            using (var db = new LiteDatabase("gamelist.db"))
+            // DOWNLOAD SPLATOON IMAGES
+            using (var db2 = new LiteDatabase("postlist.db"))
             {
-                var posts = db.GetCollection<Game>("gamelist");
+                var posts = db2.GetCollection<Post>("postList");
                 var allPosts = posts.Find(Query.All()).ToList();
-                var allPostsTip = allPosts.Where(node => node.IconUri.ToString().Contains("/tip/")).Count();
-                var postIndex = allPosts.IndexOf(allPosts.First(n => n.Title == "Excave III : Tower of Destiny"));
 
-                // New, Parallel, l337 way!
-
-                Parallel.For(2000, allPosts.Count(), index => {
-                    var game = allPosts[index];
-                    Console.WriteLine($"{game.Title}");
+                Parallel.ForEach(allPosts, post =>
+                {
                     using (var webClient = new WebClient())
                     {
-                        if (game.CommunityListIcon != null)
+                        try
                         {
-                            Directory.CreateDirectory($"{game.CommunityListIcon.Segments[1]}");
-                            webClient.DownloadFile(game.CommunityListIcon, $"{game.CommunityListIcon.Segments[1]}" + Path.GetFileName(game.CommunityListIcon.ToString()) + ".png");
+                            var filepath = $"{post.ImageUri.Segments[1]}{Path.GetFileName(post.ImageUri.ToString())}.png";
+                            if (!File.Exists(filepath))
+                            {
+                                Console.WriteLine($"Downloading {post.ID}.png");
+                                Directory.CreateDirectory($"{post.ImageUri.Segments[1]}");
+                                webClient.DownloadFile(post.ImageUri, filepath);
+                            }
                         }
-
-                        Directory.CreateDirectory($"{game.IconUri.Segments[1]}");
-                        webClient.DownloadFile(game.IconUri, $"{game.IconUri.Segments[1]}" + Path.GetFileName(game.IconUri.ToString()) + ".png");
+                        catch (Exception ex)
+                        {
+                            // If we fail, append to failed.txt
+                            File.AppendAllText("failed.txt", post.ImageUri.ToString() + Environment.NewLine);
+                        }
                     }
-                }); 
-
-                // Old, terrible way
-                //foreach (var game in allPosts)
-                //{
-                //    Console.WriteLine($"{game.Title}");
-                //    if (game.CommunityListIcon != null)
-                //    {
-                //        Directory.CreateDirectory($"{game.CommunityListIcon.Segments[1]}");
-                //        webClient.DownloadFile(game.CommunityListIcon, $"{game.CommunityListIcon.Segments[1]}" + Path.GetFileName(game.CommunityListIcon.ToString()) + ".png");
-                //    }
-
-                //    Directory.CreateDirectory($"{game.IconUri.Segments[1]}");
-                //    webClient.DownloadFile(game.IconUri, $"{game.IconUri.Segments[1]}" + Path.GetFileName(game.IconUri.ToString()) + ".png");
-                //}
+                });
             }
 
+            //return;
+
+            // GET SPLATOON POSTS
+
             //using (var db = new LiteDatabase("gamelist.db"))
+            //using (var db2 = new LiteDatabase("postlist.db"))
+            //{
+            //    var games = db.GetCollection<Game>("gamelist");
+            //    var posts = db2.GetCollection<Post>("postList");
+            //    var allGames = games.Find(Query.All()).ToList();
+            //    var allPosts = posts.Find(Query.All()).ToList();
+
+            //    double nextPost = 0;
+            //    double nextPostMinutes = 0;
+
+            //    DateTime time = DateTime.UtcNow;
+            //    if (allPosts.Any())
+            //    {
+            //        var post = allPosts.OrderBy(n => n.PostedDate).First();
+            //        var secondsSinceEpoch = post.PostedDate.ToUnixTime();
+            //        nextPost = -(secondsSinceEpoch);
+            //        time = post.PostedDate;
+            //    }
+
+            //    // Get Japanese version of Splatoon
+            //    var splatoon = allGames.First(n => n.Title.Contains("Splatoon") && n.ViewRegion == ViewRegion.Japan);
+
+            //    var countInserted = 0;
+            //    while (true)
+            //    {
+            //        var splatoonGameDrawingResponse = await ctx.GetWebApiResponse(splatoon, MiiverseArchive.Tools.Constants.WebApiType.Drawing, nextPost);
+            //        if (splatoonGameDrawingResponse.Posts == null)
+            //        {
+            //            // We're done! Time to wrap it up.
+            //            return;
+            //        }
+
+            //        foreach (var post in splatoonGameDrawingResponse.Posts)
+            //        {
+            //            // Upsert either "inserts" a new post, or "Updates" an existing post
+            //            // I use this so, in case the same post shows up again,
+            //            // we can continue without the program throwing an error.
+            //            posts.Upsert(post);
+            //        }
+
+            //        // We can't get exact times for posts, only relative times like "About an hour".
+            //        // Because of that, we can't rely on using the last post to set where we start from.
+            //        // Because we could end up just getting the same last hour of posts. So instead.
+            //        // Keep substracting 15 minutes from the current time. That should result in getting newer posts.
+
+            //        TimeSpan epoch;
+            //        time = splatoonGameDrawingResponse.Posts.Last().PostedDate;
+            //        if (countInserted != posts.Count())
+            //        {
+            //            epoch = time - new DateTime(1970, 1, 1);
+            //        }
+            //        else
+            //        {
+            //            nextPostMinutes = nextPostMinutes + 100;
+            //            epoch = time.AddMinutes(-1 * nextPostMinutes) - new DateTime(1970, 1, 1);
+            //        }
+            //        double secondsSinceEpoch = epoch.TotalSeconds;
+            //        nextPost = -(secondsSinceEpoch);
+            //        Console.WriteLine("Next Post Time: {0} Total Inserted: {1}", nextPost, posts.Count());
+            //        countInserted = posts.Count();
+            //    }
+            //}
+
+            //using (var db = new LiteDatabase("gamelist.db"))
+            //{
+            //    var posts = db.GetCollection<Game>("gamelist");
+            //    var allPosts = posts.Find(Query.All()).ToList();
+            //    var allPostsTip = allPosts.Where(node => node.IconUri.ToString().Contains("/tip/")).Count();
+            //    var postIndex = allPosts.IndexOf(allPosts.First(n => n.Title == "Excave III : Tower of Destiny"));
+
+            //    // New, Parallel, l337 way!
+
+            //    Parallel.For(2000, allPosts.Count(), index =>
+            //    {
+            //        var game = allPosts[index];
+            //        Console.WriteLine($"{game.Title}");
+            //        using (var webClient = new WebClient())
+            //        {
+            //            if (game.CommunityListIcon != null)
+            //            {
+            //                Directory.CreateDirectory($"{game.CommunityListIcon.Segments[1]}");
+            //                webClient.DownloadFile(game.CommunityListIcon, $"{game.CommunityListIcon.Segments[1]}" + Path.GetFileName(game.CommunityListIcon.ToString()) + ".png");
+            //            }
+
+            //            Directory.CreateDirectory($"{game.IconUri.Segments[1]}");
+            //            webClient.DownloadFile(game.IconUri, $"{game.IconUri.Segments[1]}" + Path.GetFileName(game.IconUri.ToString()) + ".png");
+            //        }
+            //    });
+
+            //    ////Old, terrible way
+            //    //foreach (var game in allPosts)
+            //    //{
+            //    //    Console.WriteLine($"{game.Title}");
+            //    //    if (game.CommunityListIcon != null)
+            //    //    {
+            //    //        Directory.CreateDirectory($"{game.CommunityListIcon.Segments[1]}");
+            //    //        webClient.DownloadFile(game.CommunityListIcon, $"{game.CommunityListIcon.Segments[1]}" + Path.GetFileName(game.CommunityListIcon.ToString()) + ".png");
+            //    //    }
+
+            //    //    Directory.CreateDirectory($"{game.IconUri.Segments[1]}");
+            //    //    webClient.DownloadFile(game.IconUri, $"{game.IconUri.Segments[1]}" + Path.GetFileName(game.IconUri.ToString()) + ".png");
+            //    //}
+            //}
+
+            // GET GAME LIST
+
+            //using (var db = new LiteDatabase("gamelist-test.db"))
             //{
             //    var posts = db.GetCollection<Game>("gamelist");
             //    var allPosts = posts.Find(Query.All());
             //    var offset = 0;
 
-                //    Console.WriteLine("Getting Nintendo3DS Game List");
-                //    while (true)
-                //    {
-                //        var communityList = await ctx.GetCommunityGameListAsync(GameSearchList.All, GamePlatformSearch.Nintendo3ds, offset);
-                //        if (communityList.Games == null)
-                //        {
-                //            // We're done! Time to wrap it up.
-                //            break;
-                //        }
+            //    Console.WriteLine("Getting Nintendo3DS Game List");
+            //    while (true)
+            //    {
+            //        var communityList = await ctx.GetCommunityGameListAsync(GameSearchList.All, GamePlatformSearch.Nintendo3ds, offset);
+            //        if (communityList.Games == null)
+            //        {
+            //            // We're done! Time to wrap it up.
+            //            break;
+            //        }
 
-                //        foreach (var game in communityList.Games)
-                //        {
-                //            var test = posts.FindById(game.Id);
-                //            if (test == null)
-                //            {
-                //                game.ViewRegion = viewRegion;
-                //                posts.Insert(game);
-                //            }
-                //            else
-                //            {
-                //                // Game exists in database, so say that it's a world release.
-                //                game.ViewRegion = ViewRegion.World;
-                //                posts.Upsert(game);
-                //            }
-                //        }
-                //        Console.WriteLine($"{posts.Count()}");
-                //        offset = offset + 30;
-                //    }
+            //        foreach (var game in communityList.Games)
+            //        {
+            //            var test = posts.FindById(game.Id);
+            //            if (test == null)
+            //            {
+            //                game.ViewRegion = viewRegion;
+            //                posts.Insert(game);
+            //            }
+            //            else
+            //            {
+            //                // Game exists in database, so say that it's a world release.
+            //                game.ViewRegion = ViewRegion.World;
+            //                posts.Upsert(game);
+            //            }
+            //        }
+            //        Console.WriteLine($"{posts.Count()}");
+            //        offset = offset + 30;
+            //    }
 
-                //    Console.WriteLine("Getting WiiU Game List");
-                //    while (true)
-                //    {
-                //        var communityList = await ctx.GetCommunityGameListAsync(GameSearchList.All, GamePlatformSearch.Wiiu, offset);
-                //        if (communityList.Games == null)
-                //        {
-                //            // We're done! Time to wrap it up.
-                //            break;
-                //        }
+            //    offset = 0;
 
-                //        foreach (var game in communityList.Games)
-                //        {
-                //            var test = posts.FindById(game.Id);
-                //            if (test == null)
-                //            {
-                //                game.ViewRegion = viewRegion;
-                //                posts.Insert(game);
-                //            }
-                //            else
-                //            {
-                //                // Game exists in database, so say that it's a world release.
-                //                game.ViewRegion = ViewRegion.World;
-                //                posts.Upsert(game);
-                //            }
-                //        }
-                //        Console.WriteLine($"{posts.Count()}");
-                //        offset = offset + 30;
-                //    }
-                //}
+            //    Console.WriteLine("Getting WiiU Game List");
+            //    while (true)
+            //    {
+            //        var communityList = await ctx.GetCommunityGameListAsync(GameSearchList.All, GamePlatformSearch.Wiiu, offset);
+            //        if (communityList.Games == null)
+            //        {
+            //            // We're done! Time to wrap it up.
+            //            break;
+            //        }
+
+            //        foreach (var game in communityList.Games)
+            //        {
+            //            var test = posts.FindById(game.Id);
+            //            if (test == null)
+            //            {
+            //                game.ViewRegion = viewRegion;
+            //                posts.Insert(game);
+            //            }
+            //            else
+            //            {
+            //                // Game exists in database, so say that it's a world release.
+            //                game.ViewRegion = ViewRegion.World;
+            //                posts.Upsert(game);
+            //            }
+            //        }
+            //        Console.WriteLine($"{posts.Count()}");
+            //        offset = offset + 30;
+            //    }
+            //}
         }
 
         #region Helpers
