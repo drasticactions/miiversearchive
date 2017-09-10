@@ -254,6 +254,84 @@ namespace MiiverseArchive.Context
             }
         }
 
+        public async Task<RelatedCommunityListResponse> GetRelatedCommunityGameListAsync(string gameid)
+        {
+            AccessCheck();
+            var trueGameId = gameid.Replace("community-", "");
+            var baseUrl = $"https://miiverse.nintendo.net/titles/{trueGameId}";
+
+            var req = new HttpRequestMessage(HttpMethod.Get, baseUrl);
+            req.Headers.Add("X-Requested-With", "XMLHttpRequest");
+            using (var result = await Client.SendAsync(req))
+            using (var content = await result.Content.ReadAsStreamAsync())
+            {
+                var doc = new HtmlDocument();
+                doc.Load(content, System.Text.Encoding.UTF8);
+                var gameListNode =
+                    doc.DocumentNode.Descendants("ul")
+                        .FirstOrDefault(
+                            node =>
+                                node.GetAttributeValue("class", string.Empty).Contains("list community-list"));
+                if (gameListNode == null)
+                {
+                    return new RelatedCommunityListResponse(null);
+                }
+
+                var gamesList = gameListNode.Descendants("li");
+                var output = new List<CommunityItem>();
+                foreach (var game in gamesList)
+                {
+                    var id = game.GetAttributeValue("id", string.Empty);
+                    var titleUrl = game.GetAttributeValue("data-href", string.Empty);
+
+                    var communityIconImageNode = game.Descendants("img").FirstOrDefault(n => n.GetAttributeValue("class", string.Empty) == "community-list-cover");
+                    var communityListIcon = communityIconImageNode?.GetAttributeValue("src", string.Empty);
+
+                    var iconImg = game.Descendants("img").FirstOrDefault(n => n.GetAttributeValue("class", string.Empty) == "icon");
+                    var icon = iconImg?.GetAttributeValue("src", string.Empty);
+
+                    var body =
+                        game.Descendants("div")
+                            .FirstOrDefault(node => node.GetAttributeValue("class", string.Empty) == "body");
+
+                    var titleNode =
+                        body.Descendants("a")
+                            .FirstOrDefault(node => node.GetAttributeValue("class", string.Empty) == "title");
+                    var title = titleNode?.InnerText;
+
+                    var imageNode = body.Descendants("img").FirstOrDefault();
+                    var image = imageNode?.GetAttributeValue("src", string.Empty);
+                    var imageFilename = string.Empty;
+                    if (!string.IsNullOrEmpty(image))
+                    {
+                        var uri = new Uri(image);
+                        imageFilename = System.IO.Path.GetFileName(uri.LocalPath).Split('?').FirstOrDefault();
+                    }
+
+                    var communityBadgeNode = game.Descendants("span").FirstOrDefault(n => n.GetAttributeValue("class", string.Empty) == "news-community-badge");
+                    var communityBadge = "";
+                    if (communityBadgeNode != null)
+                        communityBadge = communityBadgeNode.InnerText;
+
+                    var gameTextSpan = body.Descendants("span").LastOrDefault();
+                    var gameText = gameTextSpan.InnerText;
+
+                    var fullGameId = $"community-{trueGameId}-{id.Replace("community-", "")}";
+
+                    if (string.IsNullOrEmpty(communityListIcon))
+                    {
+                        output.Add(new CommunityItem(fullGameId, trueGameId, communityBadge, title, titleUrl, new Uri(icon), imageFilename, gameText));
+                    }
+                    else
+                    {
+                        output.Add(new CommunityItem(fullGameId, trueGameId, communityBadge, title, titleUrl, new Uri(icon), new Uri(communityListIcon), imageFilename, gameText));
+                    }
+                }
+                return new RelatedCommunityListResponse(output);
+            }
+
+        }
+
         public async Task<CommunityListResponse> GetCommunityGameListAsync(GameSearchList searchOption, GamePlatformSearch platformSearch, int offset)
         {
             AccessCheck();
@@ -781,7 +859,6 @@ namespace MiiverseArchive.Context
 
             if (isImagePost)
             {
-                Console.WriteLine("Image post");
                 return new Post(
                     id,
                     accept,
