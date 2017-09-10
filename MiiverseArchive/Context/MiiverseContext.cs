@@ -719,8 +719,11 @@ namespace MiiverseArchive.Context
                 });
 
             Uri screenShotUri = null;
-            postContentNode.ChildNodes.MatchClassName("screenshot-container",
-                some: n => screenShotUri = n.GetImageSource());
+
+            var screenshotImageNode = postContentNode.ChildNodes.FirstOrDefault(n => n.GetAttributeValue("class", string.Empty).Contains("screenshot-container still-image"));
+
+            if (screenshotImageNode != null)
+                screenShotUri = screenshotImageNode.GetImageSource();
 
             var userNameAnchorNode = postNode.Descendants("p").FirstOrDefault(node => node.GetAttributeValue("class", string.Empty) == "user-name").FirstChild;
             var userName = userNameAnchorNode.GetAttributeValue("href", string.Empty).Substring(7);
@@ -775,6 +778,7 @@ namespace MiiverseArchive.Context
 
             if (isImagePost)
             {
+                Console.WriteLine("Image post");
                 return new Post(
                     id,
                     accept,
