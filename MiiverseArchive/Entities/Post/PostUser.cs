@@ -3,7 +3,6 @@ using System.Runtime.Serialization;
 
 namespace MiiverseArchive.Entities.Post
 {
-	[DataContract]
 	public  class PostUser
 	{
         public PostUser()
@@ -11,20 +10,20 @@ namespace MiiverseArchive.Entities.Post
 
         }
 
-		public PostUser(string name, string screenName, Uri iconUri)
+		public PostUser(string name, string screenName, Uri iconUri, bool isOfficial)
 		{
 			this.Name = name;
 			this.ScreenName = screenName;
 			this.IconUri = iconUri;
+            this.IsOfficial = isOfficial;
 		}
 
-		[DataMember(Name = "name")]
 		public string Name { get; set; }
 
-		[DataMember(Name = "screen_name")]
 		public string ScreenName { get; set; }
 
-		[DataMember(Name = "icon_uri")]
 		public Uri IconUri { get; set; }
+
+        public bool IsOfficial { get; set; }
 	}
 }

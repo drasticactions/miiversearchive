@@ -735,8 +735,11 @@ namespace MiiverseArchive.Context
             }
             catch (Exception)
             {
-                userIconContainer = postNode.Descendants("a").FirstOrDefault(node => node.GetAttributeValue("class", string.Empty) == "icon-container");
+                userIconContainer = postNode.Descendants("a").FirstOrDefault(node => node.GetAttributeValue("class", string.Empty).Contains("icon-container"));
             }
+
+            var isOfficialUser = postNode.Descendants("a").FirstOrDefault(node => node.GetAttributeValue("class", string.Empty).Contains("icon-container official-user")) != null;
+
             var userIconUri = userIconContainer.Descendants("img").FirstOrDefault(node => node.GetAttributeValue("class", string.Empty) == "icon").GetAttributeValue("src", "");
             var feeling = FeelingTypeHelpers.DetectFeelingTypeFromIconUri(new Uri(userIconUri));
             var normalUserIconUri = FeelingTypeHelpers.GetNormalFaceIconUri(new Uri(userIconUri), feeling);
@@ -791,7 +794,7 @@ namespace MiiverseArchive.Context
                     isPlayed,
                     isSpoiler,
                     screenShotUri,
-                    new PostUser(userName, screenName, normalUserIconUri),
+                    new PostUser(userName, screenName, normalUserIconUri, isOfficialUser),
                     feeling,
                     new PostCommunity(titleID, communityID, communityName, communityIconUri));
             }
@@ -808,7 +811,7 @@ namespace MiiverseArchive.Context
                 isPlayed,
                 isSpoiler,
                 screenShotUri,
-                new PostUser(userName, screenName, normalUserIconUri),
+                new PostUser(userName, screenName, normalUserIconUri, isOfficialUser),
                 feeling,
                 new PostCommunity(titleID, communityID, communityName, communityIconUri));
         }
