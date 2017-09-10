@@ -10,7 +10,8 @@ namespace MiiverseArchive.Tools.Constants
         InGame,
         OldGame,
         Replies,
-        Posts
+        Posts,
+        Special
     }
 
 	public static class MiiverseConstantValues

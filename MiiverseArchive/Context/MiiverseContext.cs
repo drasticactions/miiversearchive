@@ -141,6 +141,9 @@ namespace MiiverseArchive.Context
                 case WebApiType.Posts:
                     baseUrl += game.TitleUrl.Replace("title", "posts");
                     break;
+                case WebApiType.Special:
+                    baseUrl += game.TitleUrl;
+                    break;
             }
 
             if (lastPostTime != 0 && (type != WebApiType.Replies || type != WebApiType.Posts))
@@ -189,6 +192,7 @@ namespace MiiverseArchive.Context
                 case WebApiType.Drawing:
                 case WebApiType.InGame:
                 case WebApiType.OldGame:
+                case WebApiType.Special:
                     var postListNode = doc.DocumentNode.Descendants("div")
                         .FirstOrDefault(node => node.GetAttributeValue("class", string.Empty).Contains("list post-list"));
 
@@ -317,7 +321,10 @@ namespace MiiverseArchive.Context
                     var gameText = gameTextSpan.InnerText;
 
                     var fullGameId = $"community-{trueGameId}-{id.Replace("community-", "")}";
-
+                    if (!gameText.Contains("WiiU Game") || !gameText.Contains("3DS Game"))
+                    {
+                        title = $"{gameText} - {title}";
+                    }
                     if (string.IsNullOrEmpty(communityListIcon))
                     {
                         output.Add(new CommunityItem(fullGameId, trueGameId, communityBadge, title, titleUrl, new Uri(icon), imageFilename, gameText));
@@ -775,6 +782,29 @@ namespace MiiverseArchive.Context
             var tagType = TagType.None;
             var tagID = string.Empty;
             var tag = string.Empty;
+
+            var testPostContentNodes = postContentNode.Descendants("a").FirstOrDefault(n => n.GetAttributeValue("class", string.Empty).Contains("post-tag"));
+
+            if (testPostContentNodes != null)
+            {
+                var hrefText = testPostContentNodes.GetAttributeValue("href", string.Empty);
+                var questionMarkIndex = hrefText.IndexOf('?');
+                var equalMarkIndex = hrefText.IndexOf('=');
+                var tagTypeText = hrefText.Substring(questionMarkIndex + 1, equalMarkIndex - questionMarkIndex - 1);
+                if (tagTypeText.Contains("official_tag"))
+                {
+                    tagType = TagType.Official;
+                    tagID = hrefText.Substring(equalMarkIndex + 1);
+                    tag = testPostContentNodes.InnerText;
+                }
+                else if (tagTypeText.Contains("topic_tag"))
+                {
+                    tagType = TagType.Topic;
+                    tagID = hrefText.Substring(equalMarkIndex + 1);
+                    tag = testPostContentNodes.InnerText;
+                }
+            }
+
             postContentNode.ChildNodes.MatchClassName("post-tag",
                 some: n =>
                 {

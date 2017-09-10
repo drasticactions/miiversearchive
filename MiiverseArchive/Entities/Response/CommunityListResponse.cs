@@ -15,4 +15,13 @@ namespace MiiverseArchive.Entities.Response
         }
         public List<Game> Games { get; set; } 
     }
+
+    public class RelatedCommunityListResponse
+    {
+        public RelatedCommunityListResponse(List<CommunityItem> game)
+        {
+            this.Games = game;
+        }
+        public List<CommunityItem> Games { get; set; }
+    }
 }
