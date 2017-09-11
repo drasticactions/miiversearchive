@@ -756,6 +756,13 @@ namespace MiiverseArchive.Context
                 return new Post(id, true);
             }
 
+            var isHiddenDivNode = postNode.Descendants("div").Where(n => n.GetAttributeValue("class", string.Empty).Contains("hidden")).FirstOrDefault();
+            if (isHiddenDivNode != null)
+            {
+                if (isHiddenDivNode.InnerText.Contains("This post is being reviewed"))
+                    return new Post(id, true);
+            }
+
             uint replyCount = 0;
             if (!isReply)
             {
