@@ -13,6 +13,7 @@ using MiiverseArchive.Entities.Response;
 using Newtonsoft.Json;
 using MiiverseArchive.Entities.User;
 using MiiverseArchive.Context;
+using MiiverseArchive.Tools.Constants;
 
 namespace MiiverseArchiveRedux
 {
@@ -79,6 +80,9 @@ namespace MiiverseArchiveRedux
 
         static async Task MainAsync(string[] args)
         {
+            var filename = args.Length > 0 ? args[0] : "";
+            var gameId = args.Length > 2 ? args[2] : "";
+            var webType = args.Length > 1 ? (WebApiType)Convert.ToInt32(args[1]) : WebApiType.Diary;
             var oauthClient = new MiiverseOAuthClient();
             var token = oauthClient.GetTokenAsync().GetAwaiter().GetResult();
             Console.WriteLine("client_id:\t{0}", token.ClientID);
@@ -102,34 +106,184 @@ namespace MiiverseArchiveRedux
             // Hardcoding this for testing...
             Console.WriteLine("-----------");
 
-            // DOWNLOAD SPLATOON IMAGES
-            using (var db2 = new LiteDatabase("postlist.db"))
-            {
-                var posts = db2.GetCollection<Post>("postList");
-                var allPosts = posts.Find(Query.All()).ToList();
+            var testGame = ctx.GetCommunityGameListAsync(GameSearchList.All, GamePlatformSearch.Wiiu, 300).GetAwaiter().GetResult();
 
-                Parallel.ForEach(allPosts, post =>
-                {
-                    using (var webClient = new WebClient())
-                    {
-                        try
-                        {
-                            var filepath = $"{post.ImageUri.Segments[1]}{Path.GetFileName(post.ImageUri.ToString())}.png";
-                            if (!File.Exists(filepath))
-                            {
-                                Console.WriteLine($"Downloading {post.ID}.png");
-                                Directory.CreateDirectory($"{post.ImageUri.Segments[1]}");
-                                webClient.DownloadFile(post.ImageUri, filepath);
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            // If we fail, append to failed.txt
-                            File.AppendAllText("failed.txt", post.ImageUri.ToString() + Environment.NewLine);
-                        }
-                    }
-                });
+            //using (var db = new LiteDatabase("gamelist.db"))
+            //using (var db2 = new LiteDatabase("gamelistrelated.db"))
+            //{
+            //    var games = db.GetCollection<Game>("gamelist");
+            //    var gamesRelated = db2.GetCollection<CommunityItem>("gamelistrelated");
+            //    var allGames = games.Find(Query.All()).ToList();
+            //    foreach (var game in allGames)
+            //    {
+            //        var testingbesting = game.TitleUrl.Split('/');
+            //        var result = await ctx.GetRelatedCommunityGameListAsync(testingbesting[2]);
+            //        if (result.Games == null) continue;
+            //        foreach (var test in result.Games)
+            //        {
+            //            test.ViewRegion = game.ViewRegion;
+            //            test.Type = game.Type;
+            //            Console.WriteLine($"{test.Title}");
+            //            gamesRelated.Insert(test);
+            //        }
+            //    }
+
+            //    var allGamesRelated = gamesRelated.Find(Query.All()).ToList();
+            //    File.WriteAllText("gamelistrelated.json", JsonConvert.SerializeObject(allGamesRelated, Formatting.Indented));
+            //    File.WriteAllText("gamelistrelated-notmain.json", JsonConvert.SerializeObject(allGamesRelated.Where(node => node.CommunityBadge != "Main Community"), Formatting.Indented));
+            //}
+
+            var gameList = JsonConvert.DeserializeObject<List<Game>>(File.ReadAllText($"{filename}.json"));
+
+            var startIndex = 0;
+
+            if (gameId != "")
+            {
+                var game = gameList.FirstOrDefault(node => node.Id == gameId);
+                if (game != null)
+                    startIndex = gameList.IndexOf(game);
             }
+
+            var filenametest = "";
+
+            switch (webType)
+            {
+                case WebApiType.Diary:
+                    filenametest = "diary";
+                    break;
+                case WebApiType.Discussion:
+                    filenametest = "discussion";
+                    break;
+                case WebApiType.Drawing:
+                    filenametest = "drawing";
+                    break;
+                case WebApiType.InGame:
+                    filenametest = "ingame";
+                    break;
+                case WebApiType.OldGame:
+                    filenametest = "oldgame";
+                    break;
+                case WebApiType.Posts:
+                    filenametest = "posts";
+                    break;
+                case WebApiType.Replies:
+                    filenametest = "replies";
+                    break;
+                case WebApiType.Special:
+                    filenametest = "special";
+                    break;
+            }
+
+            for (var i = startIndex; i < gameList.Count; i++)
+            {
+                var game = gameList[i];
+                Console.WriteLine($"Game - {game.Title} - {game.Id} - {game.TitleUrl}");
+                using (var db = new LiteDatabase($"{game.Id}-{filenametest}.db"))
+                {
+                    var posts = db.GetCollection<Post>("posts");
+                    var allPosts = posts.Find(Query.All());
+
+                    double nextPost = 0;
+                    double nextPostMinutes = 0;
+                    DateTime time = DateTime.UtcNow;
+                    if (allPosts.Any())
+                    {
+                        var lastPost = allPosts.Last();
+                        var secondsSinceEpoch = lastPost.PostedDate.ToUnixTime();
+                        nextPost = -(secondsSinceEpoch);
+                        time = lastPost.PostedDate;
+                    }
+
+                    var countInserted = 0;
+
+                    while (true)
+                    {
+                        var response = await ctx.GetWebApiResponse(game, webType, nextPost);
+                        if (response.Posts == null || !response.Posts.Any())
+                        {
+                            // We're done! Time to wrap it up.
+                            Console.WriteLine(Environment.NewLine);
+                            break;
+                        }
+
+                        foreach (var post in response.Posts)
+                        {
+                            // Upsert either "inserts" a new post, or "Updates" an existing post
+                            // I use this so, in case the same post shows up again,
+                            // we can continue without the program throwing an error.
+                            posts.Upsert(post);
+                        }
+
+                        // We can't get exact times for posts, only relative times like "About an hour".
+                        // Because of that, we can't rely on using the last post to set where we start from.
+                        // Because we could end up just getting the same last hour of posts. So instead.
+                        // Keep substracting 15 minutes from the current time. That should result in getting newer posts.
+
+                        TimeSpan epoch;
+                        time = response.Posts.Last(n => n.PostedDate != DateTime.MinValue).PostedDate;
+                        if (countInserted != posts.Count())
+                        {
+                            epoch = time - new DateTime(1970, 1, 1);
+                        }
+                        else
+                        {
+                            nextPostMinutes = nextPostMinutes + 15;
+                            epoch = time.AddMinutes(-1 * nextPostMinutes) - new DateTime(1970, 1, 1);
+                        }
+                        double secondsSinceEpoch = epoch.TotalSeconds;
+                        nextPost = -(secondsSinceEpoch);
+                        Console.Write("\rNext Post Time: {0} Total Inserted: {1}", nextPost, posts.Count());
+                        countInserted = posts.Count();
+                    }
+                }
+            }
+
+            //var userIds = File.ReadAllLines(filename).ToList();
+            //using (var db = new LiteDatabase($"{filename}.db"))
+            //{
+            //    var users = db.GetCollection<UserFriend>("friends");
+            //    var allUsers = users.Find(Query.All()).ToList();
+            //    var startingCount = 0;
+            //    if (allUsers.Any())
+            //    {
+            //        var lastUser = allUsers.Last().ScreenName;
+            //        startingCount = userIds.IndexOf(lastUser);
+            //    }
+            //    for (var i = startingCount; i <= userIds.Count(); i++)
+            //    {
+            //        var user = userIds[i];
+            //        Console.WriteLine($"Getting Friends for {user}");
+            //        var friendList = await GetFeed(ctx, user, UserProfileFeedType.Friends);
+            //        Console.WriteLine($"{user} Friends: {friendList.ResultScreenNames.Count()}");
+
+            //        var newFriendsList = friendList.ResultScreenNames.Where(n => !allUsers.Any(o => o.ProfileFeedType == UserProfileFeedType.Friends && o.ScreenName == user && o.AcquaintanceScreenName == n)).ToList();
+            //        foreach (var friend in newFriendsList)
+            //        {
+            //            users.Insert(new UserFriend(user, friend, UserProfileFeedType.Friends));
+            //        }
+
+            //        Console.WriteLine($"Getting Followers for {user}");
+            //        var followerList = await GetFeed(ctx, user, UserProfileFeedType.Followers);
+            //        var newFollowersList = followerList.ResultScreenNames.Where(n => !allUsers.Any(o => o.ProfileFeedType == UserProfileFeedType.Followers && o.ScreenName == user && o.AcquaintanceScreenName == n)).ToList();
+
+            //        Console.WriteLine($"{user} Followers: {followerList.ResultScreenNames.Count()}");
+            //        foreach (var friend in newFollowersList)
+            //        {
+            //            users.Insert(new UserFriend(user, friend, UserProfileFeedType.Followers));
+            //        }
+
+            //        Console.WriteLine($"Getting Following for {user}");
+            //        var FollowingList = await GetFeed(ctx, user, UserProfileFeedType.Following);
+            //        var newFollowingList = FollowingList.ResultScreenNames.Where(n => !allUsers.Any(o => o.ProfileFeedType == UserProfileFeedType.Following && o.ScreenName == user && o.AcquaintanceScreenName == n)).ToList();
+
+            //        Console.WriteLine($"{user} Following: {FollowingList.ResultScreenNames.Count()}");
+            //        foreach (var friend in newFollowingList)
+            //        {
+            //            users.Insert(new UserFriend(user, friend, UserProfileFeedType.Following));
+            //        }
+
+            //    }
+            //}
 
             //return;
 
@@ -339,7 +493,18 @@ namespace MiiverseArchiveRedux
 
             return string.Concat(inputList);
         }
-
         #endregion
+    }
+
+    public static class ListExtensions
+    {
+        public static List<List<T>> ChunkBy<T>(this List<T> source, int chunkSize)
+        {
+            return source
+                .Select((x, i) => new { Index = i, Value = x })
+                .GroupBy(x => x.Index / chunkSize)
+                .Select(x => x.Select(v => v.Value).ToList())
+                .ToList();
+        }
     }
 }
