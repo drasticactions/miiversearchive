@@ -14,6 +14,7 @@ using MiiverseArchive.Entities.User;
 using MiiverseArchive.Tools.Constants;
 using MiiverseArchive.Tools.Extensions;
 using System.Diagnostics;
+using System.Web;
 
 namespace MiiverseArchive.Context
 {
@@ -47,19 +48,15 @@ namespace MiiverseArchive.Context
             });
             var client = new HttpClient(handler, true);
             client.DefaultRequestHeaders.Add("Accept-Language", $"{language},en;q=0.5");
+            client.DefaultRequestHeaders.Add("X-AUTOPAGERIZE", $"true");
             Client = client;
-
         }
 
-        public async Task<WebApiResponse> GetPostResponse(string postId, WebApiType type, double lastPostTime = 0, double currentDate = 0)
+        public async Task<WebApiResponse> GetPostResponse(string postId, WebApiType type, string nextPageUrl)
         {
             AccessCheck();
 
             var baseUrl = $"https://miiverse.nintendo.net/posts/{postId}";
-            if (currentDate == 0)
-            {
-                currentDate = ReturnEpochTime(DateTime.Now);
-            }
 
             switch (type)
             {
@@ -68,13 +65,9 @@ namespace MiiverseArchive.Context
                     break;
             }
 
-            if (lastPostTime != 0)
+            if (nextPageUrl != "")
             {
-                baseUrl += $"?page_param=%7B%22upinfo%22%3A%22{lastPostTime * -1 }%2C{(int)currentDate}%2C{currentDate}%22%2C%22reftime%22%3A%22{lastPostTime}%22%2C%22per_page%22%3A120%2C%22order%22%3A%22asc%22%7D&selected=all";
-            }
-            else
-            {
-                baseUrl += $"?page_param=%7B%22per_page%22%3A120%2C%22order%22%3A%22asc%22%7D&selected=all";
+                baseUrl += nextPageUrl;
             }
 
             var req = new HttpRequestMessage(HttpMethod.Get, baseUrl);
@@ -104,57 +97,52 @@ namespace MiiverseArchive.Context
                     postTime = -(ReturnEpochTime(posts.Last().PostedDate));
                 }
 
-                return new WebApiResponse(currentDate, postTime, posts);
+                var nextPageUrlNode = doc.DocumentNode.Descendants("div").FirstOrDefault(node => node.GetAttributeValue("class", string.Empty).Contains("post-list"));
+                string nextNextPageUrl = nextPageUrlNode != null ? nextPageUrlNode.GetAttributeValue("data-next-page-url", string.Empty) : "";
+
+                return new WebApiResponse(nextNextPageUrl, posts);
             }
         }
 
-        public async Task<WebApiResponse> GetWebApiResponse(Game game, WebApiType type, double lastPostTime = 0, double currentDate = 0)
+        public async Task<WebApiResponse> GetWebApiResponse(Game game, WebApiType type, string nextPageUrl)
         {
             AccessCheck();
 
             var baseUrl = "https://miiverse.nintendo.net";
-            if (currentDate == 0)
-            {
-                currentDate = ReturnEpochTime(DateTime.Now);
-            }
 
-            switch(type)
+            if (nextPageUrl != "")
             {
-                case WebApiType.Diary:
-                    baseUrl += game.TitleUrl + "/diary";
-                    break;
-                case WebApiType.Drawing:
-                    baseUrl += game.TitleUrl + "/artwork";
-                    break;
-                case WebApiType.Discussion:
-                    baseUrl += game.TitleUrl + "/topic";
-                    break;
-                case WebApiType.InGame:
-                    baseUrl += game.TitleUrl + "/in_game";
-                    break;
-                case WebApiType.OldGame:
-                    baseUrl += game.TitleUrl + "/old";
-                    break;
-                case WebApiType.Replies:
-                    baseUrl += game.TitleUrl.Replace("title", "posts") + "/replies";
-                    break;
-                case WebApiType.Posts:
-                    baseUrl += game.TitleUrl.Replace("title", "posts");
-                    break;
-                case WebApiType.Special:
-                    baseUrl += game.TitleUrl;
-                    break;
+                baseUrl += nextPageUrl;
             }
-
-            if (lastPostTime != 0 && (type != WebApiType.Replies || type != WebApiType.Posts))
+            else
             {
-                // I know it's JSON encoded and it would be better to just decode/encode it.
-                // But the service it going away so screw it.
-                baseUrl += $"?page_param=%7B%22upinfo%22%3A%22{lastPostTime * -1 }%2C{(int)currentDate}%2C{currentDate}%22%2C%22reftime%22%3A%22{lastPostTime}%22%2C%22order%22%3A%22desc%22%2C%22per_page%22%3A%2250%22%7D ";
-            }
-            else if (lastPostTime != 0)
-            {
-                baseUrl += $"?page_param=%7B%22upinfo%22%3A%22{lastPostTime * -1 }%2C{(int)currentDate}%2C{currentDate}%22%2C%22reftime%22%3A%22{lastPostTime}%22%2C%22per_page%22%3A120%2C%22order%22%3A%22asc%22%7D&selected=all";
+                switch (type)
+                {
+                    case WebApiType.Diary:
+                        baseUrl += game.TitleUrl + "/diary";
+                        break;
+                    case WebApiType.Drawing:
+                        baseUrl += game.TitleUrl + "/artwork";
+                        break;
+                    case WebApiType.Discussion:
+                        baseUrl += game.TitleUrl + "/topic";
+                        break;
+                    case WebApiType.InGame:
+                        baseUrl += game.TitleUrl + "/in_game";
+                        break;
+                    case WebApiType.OldGame:
+                        baseUrl += game.TitleUrl + "/old";
+                        break;
+                    case WebApiType.Replies:
+                        baseUrl += game.TitleUrl.Replace("title", "posts") + "/replies";
+                        break;
+                    case WebApiType.Posts:
+                        baseUrl += game.TitleUrl.Replace("title", "posts");
+                        break;
+                    case WebApiType.Special:
+                        baseUrl += game.TitleUrl;
+                        break;
+                }
             }
 
             var req = new HttpRequestMessage(HttpMethod.Get, baseUrl);
@@ -172,7 +160,27 @@ namespace MiiverseArchive.Context
                     postTime = -(ReturnEpochTime(posts.Last().PostedDate));
                 }
 
-                return new WebApiResponse(currentDate, postTime, posts);
+                HtmlNode nextPageUrlNode;
+
+                switch(type)
+                {
+                    case WebApiType.Diary:
+                    case WebApiType.Drawing:
+                    case WebApiType.InGame:
+                    case WebApiType.OldGame:
+                    case WebApiType.Special:
+                        nextPageUrlNode = doc.DocumentNode.Descendants("div").FirstOrDefault(node => node.GetAttributeValue("class", string.Empty).Contains("list post-list"));
+                        break;
+                    case WebApiType.Discussion:
+                        nextPageUrlNode = doc.DocumentNode.Descendants("div").FirstOrDefault(node => node.GetAttributeValue("class", string.Empty).Contains("list multi-timeline-post-list"));
+                        break;
+                    default:
+                        nextPageUrlNode = null;
+                        break;
+                }
+                string nextNextPageUrl = nextPageUrlNode != null ? HttpUtility.UrlDecode(nextPageUrlNode.GetAttributeValue("data-next-page-url", string.Empty)).Replace("&amp;", "&") : "";
+
+                return new WebApiResponse(nextNextPageUrl, posts);
             }
         }
 
@@ -963,15 +971,25 @@ namespace MiiverseArchive.Context
             string numberStr = input.Split(' ')[0];
             int number;
             if (int.TryParse(numberStr, out number))
-                result = DateTime.Now.AddMinutes(-number * minutesMultiplier);
+                result = DateTime.UtcNow.AddMinutes(-number * minutesMultiplier);
             // We assume Now instead of UTC, because the site is configured for your local
-            Debug.WriteLine($"Input: {input} - Result: {result} - UTCNow: {DateTime.UtcNow}");
-            // Now some of you may be wondering. Why -9?
-            // Great question... The timestamps given on the web forum are encoded, from what I can tell,
-            // To the users region. That's done on the server and passed down. I'm not 100% on which timezone it's set to,
-            // but when looking at the results from the website, it seemed to always be 9 hours off? And it wasn't exactly UTC.
-            // So for now, it's this. Until I think of something better or see how other accounts handle it.
-            return result.AddHours(-9);
+            Debug.WriteLine($"Input: {input} - Result: {result} - UTCNow: {DateTime.UtcNow}, Epoch: {result.ToUnixTime()}");
+            return result;
+        }
+    }
+
+    public static class Extensions
+    {
+        public static DateTime FromUnixTime(this long unixTime)
+        {
+            var epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Local);
+            return epoch.AddSeconds(unixTime);
+        }
+
+        public static long ToUnixTime(this DateTime date)
+        {
+            var epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Local);
+            return Convert.ToInt64((date - epoch).TotalSeconds);
         }
     }
 }
