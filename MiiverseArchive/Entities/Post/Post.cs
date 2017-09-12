@@ -1,5 +1,6 @@
 ﻿using System;
 using MiiverseArchive.Entities.Feeling;
+using MiiverseArchive.Entities.Community;
 
 namespace MiiverseArchive.Entities.Post
 {
@@ -173,5 +174,7 @@ namespace MiiverseArchive.Entities.Post
 		/// In Reply To Id
 		/// </summary>
         public string InReplyToId { get; set; }
+
+        public CommunityItem GameCommunity { get; set; }
 	}
 }

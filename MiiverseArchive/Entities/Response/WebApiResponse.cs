@@ -6,16 +6,13 @@ namespace MiiverseArchive.Entities.Response
 {
     public class WebApiResponse
     {
-        public WebApiResponse(double currentTimestamp, double nextPageUrl, IReadOnlyList<Post.Post> posts)
+        public WebApiResponse(string nextPageUrl, IReadOnlyList<Post.Post> posts)
         {
-            CurrentTimestamp = currentTimestamp;
-            NextPageTimestamp = nextPageUrl;
+            NextPageUrl = nextPageUrl;
             Posts = posts;
         }
 
-        public double CurrentTimestamp { get; set; }
-
-        public double NextPageTimestamp { get; set; }
+        public string NextPageUrl { get; set; }
 
         public IReadOnlyList<Post.Post> Posts { get; set; }
     }
