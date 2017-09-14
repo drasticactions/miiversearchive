@@ -79,7 +79,23 @@ namespace MiiverseArchiveRedux
         }
 
         static async Task MainAsync(string[] args)
-        {
+        {            
+            //using (var db2 = new LiteDatabase("fulldb.db"))
+            //{
+            //    var posts2 = db2.GetCollection<Post>("posts");
+            //    var allPosts = posts2.Find(Query.All()).Where(node => node.Text != null && node.Text.ToLower().Contains("trump")).ToList();
+            //    //Parallel.For(0, allPosts.Count(), index =>
+            //    //{
+            //    //    var game = allPosts[index];
+            //    //    Console.WriteLine($"{game.ID}");
+            //    //    using (var webClient = new WebClient())
+            //    //    {
+            //    //        Directory.CreateDirectory($"{game.ImageUri.Segments[1]}");
+            //    //        webClient.DownloadFile(game.ImageUri, $"{game.ImageUri.Segments[1]}" + Path.GetFileName(game.ImageUri.ToString()) + ".png");
+            //    //    }
+            //    //});
+            //}
+
             var filename = args.Length > 0 ? args[0] : "";
             var gameId = args.Length > 2 ? args[2] : "";
             var webType = args.Length > 1 ? (WebApiType)Convert.ToInt32(args[1]) : WebApiType.Diary;
@@ -106,7 +122,7 @@ namespace MiiverseArchiveRedux
             // Hardcoding this for testing...
             Console.WriteLine("-----------");
 
-            var testGame = ctx.GetCommunityGameListAsync(GameSearchList.All, GamePlatformSearch.Wiiu, 300).GetAwaiter().GetResult();
+            //var testGame = ctx.GetCommunityGameListAsync(GameSearchList.All, GamePlatformSearch.Wiiu, 300).GetAwaiter().GetResult();
 
             //using (var db = new LiteDatabase("gamelist.db"))
             //using (var db2 = new LiteDatabase("gamelistrelated.db"))
@@ -133,110 +149,106 @@ namespace MiiverseArchiveRedux
             //    File.WriteAllText("gamelistrelated-notmain.json", JsonConvert.SerializeObject(allGamesRelated.Where(node => node.CommunityBadge != "Main Community"), Formatting.Indented));
             //}
 
-            var gameList = JsonConvert.DeserializeObject<List<Game>>(File.ReadAllText($"{filename}.json"));
+            //var gameList = JsonConvert.DeserializeObject<List<Game>>(File.ReadAllText($"{filename}.json"));
+            //var communityItemList = JsonConvert.DeserializeObject<List<CommunityItem>>(File.ReadAllText($"{filename}.json"));
 
-            var startIndex = 0;
+            //var startIndex = 0;
 
-            if (gameId != "")
-            {
-                var game = gameList.FirstOrDefault(node => node.Id == gameId);
-                if (game != null)
-                    startIndex = gameList.IndexOf(game);
-            }
+            //if (gameId != "")
+            //{
+            //    var game = gameList.FirstOrDefault(node => node.Id == gameId);
+            //    if (game != null)
+            //        startIndex = gameList.IndexOf(game);
+            //}
 
-            var filenametest = "";
+            //var filenametest = "";
 
-            switch (webType)
-            {
-                case WebApiType.Diary:
-                    filenametest = "diary";
-                    break;
-                case WebApiType.Discussion:
-                    filenametest = "discussion";
-                    break;
-                case WebApiType.Drawing:
-                    filenametest = "drawing";
-                    break;
-                case WebApiType.InGame:
-                    filenametest = "ingame";
-                    break;
-                case WebApiType.OldGame:
-                    filenametest = "oldgame";
-                    break;
-                case WebApiType.Posts:
-                    filenametest = "posts";
-                    break;
-                case WebApiType.Replies:
-                    filenametest = "replies";
-                    break;
-                case WebApiType.Special:
-                    filenametest = "special";
-                    break;
-            }
+            //switch (webType)
+            //{
+            //    case WebApiType.Diary:
+            //        filenametest = "diary";
+            //        break;
+            //    case WebApiType.Discussion:
+            //        filenametest = "discussion";
+            //        break;
+            //    case WebApiType.Drawing:
+            //        filenametest = "drawing";
+            //        break;
+            //    case WebApiType.InGame:
+            //        filenametest = "ingame";
+            //        break;
+            //    case WebApiType.OldGame:
+            //        filenametest = "oldgame";
+            //        break;
+            //    case WebApiType.Posts:
+            //        filenametest = "posts";
+            //        break;
+            //    case WebApiType.Replies:
+            //        filenametest = "replies";
+            //        break;
+            //    case WebApiType.Special:
+            //        filenametest = "special";
+            //        break;
+            //}
 
-            for (var i = startIndex; i < gameList.Count; i++)
-            {
-                var game = gameList[i];
-                Console.WriteLine($"Game - {game.Title} - {game.Id} - {game.TitleUrl}");
-                using (var db = new LiteDatabase($"{game.Id}-{filenametest}.db"))
-                {
-                    var posts = db.GetCollection<Post>("posts");
-                    var allPosts = posts.Find(Query.All());
+            //for (var i = startIndex; i < gameList.Count; i++)
+            //{
+            //    var game = gameList[i];
+            //    Console.WriteLine($"Game - {game.Title} - {game.Id} - {game.TitleUrl}");
+            //    using (var db = new LiteDatabase($"{game.Id}-{filenametest}.db"))
+            //    {
+            //        var posts = db.GetCollection<Post>("posts");
+            //        var allPosts = posts.Find(Query.All());
 
-                    double nextPost = 0;
-                    double nextPostMinutes = 0;
-                    DateTime time = DateTime.UtcNow;
-                    if (allPosts.Any())
-                    {
-                        var lastPost = allPosts.Last();
-                        var secondsSinceEpoch = lastPost.PostedDate.ToUnixTime();
-                        nextPost = -(secondsSinceEpoch);
-                        time = lastPost.PostedDate;
-                    }
+            //        double nextPost = 0;
+            //        double nextPostMinutes = 0;
+            //        DateTime time = DateTime.UtcNow;
+            //        var nextPageUrl = "";
+            //        if (allPosts.Any())
+            //        {
+            //            if (File.Exists($"{game.Id}-nextUrl.txt")) {
+            //                nextPageUrl = File.ReadAllLines($"{game.Id}-nextUrl.txt").Last();
+            //            }
+            //        }
 
-                    var countInserted = 0;
+            //        var countInserted = 0;
 
-                    while (true)
-                    {
-                        var response = await ctx.GetWebApiResponse(game, webType, nextPost);
-                        if (response.Posts == null || !response.Posts.Any())
-                        {
-                            // We're done! Time to wrap it up.
-                            Console.WriteLine(Environment.NewLine);
-                            break;
-                        }
+            //        while (true)
+            //        {
+            //            var response = await ctx.GetWebApiResponse(game, webType, nextPageUrl);
 
-                        foreach (var post in response.Posts)
-                        {
-                            // Upsert either "inserts" a new post, or "Updates" an existing post
-                            // I use this so, in case the same post shows up again,
-                            // we can continue without the program throwing an error.
-                            posts.Upsert(post);
-                        }
+            //            if (response.Posts == null || !response.Posts.Any())
+            //            {
+            //                // We're done! Time to wrap it up.
+            //                Console.WriteLine(Environment.NewLine);
+            //                break;
+            //            }
 
-                        // We can't get exact times for posts, only relative times like "About an hour".
-                        // Because of that, we can't rely on using the last post to set where we start from.
-                        // Because we could end up just getting the same last hour of posts. So instead.
-                        // Keep substracting 15 minutes from the current time. That should result in getting newer posts.
+            //            foreach (var post in response.Posts)
+            //            {
+            //                // Upsert either "inserts" a new post, or "Updates" an existing post
+            //                // I use this so, in case the same post shows up again,
+            //                // we can continue without the program throwing an error.
+            //                post.GameCommunity = communityItemList[i];
+            //                posts.Upsert(post);
+            //            }
 
-                        TimeSpan epoch;
-                        time = response.Posts.Last(n => n.PostedDate != DateTime.MinValue).PostedDate;
-                        if (countInserted != posts.Count())
-                        {
-                            epoch = time - new DateTime(1970, 1, 1);
-                        }
-                        else
-                        {
-                            nextPostMinutes = nextPostMinutes + 15;
-                            epoch = time.AddMinutes(-1 * nextPostMinutes) - new DateTime(1970, 1, 1);
-                        }
-                        double secondsSinceEpoch = epoch.TotalSeconds;
-                        nextPost = -(secondsSinceEpoch);
-                        Console.Write("\rNext Post Time: {0} Total Inserted: {1}", nextPost, posts.Count());
-                        countInserted = posts.Count();
-                    }
-                }
-            }
+
+            //            Console.Write("\rNext Post Time: {0} Total Inserted: {1}", nextPost, posts.Count());
+
+            //            if (response.NextPageUrl == nextPageUrl || response.NextPageUrl == "")
+            //            {
+            //                // We're done! Time to wrap it up.
+            //                Console.WriteLine(Environment.NewLine);
+            //                break;
+            //            }
+
+            //            File.AppendAllText($"{game.Id}-nextUrl.txt", response.NextPageUrl + Environment.NewLine);
+            //            countInserted = posts.Count();
+            //            nextPageUrl = response.NextPageUrl;
+            //        }
+            //    }
+            //}
 
             //var userIds = File.ReadAllLines(filename).ToList();
             //using (var db = new LiteDatabase($"{filename}.db"))
