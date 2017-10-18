@@ -20,7 +20,7 @@ namespace MiiverseArchive.Context
 {
     public class MiiverseContext : IDisposable
     {
-        private bool _isEnabled = true;
+        public bool _isEnabled = true;
 
         public MiiverseContext(string userName, string clientID, string sessionValue, string language = "en-US", ViewRegion region = ViewRegion.America)
         {
@@ -184,7 +184,7 @@ namespace MiiverseArchive.Context
             }
         }
 
-        private List<Post> ParsePosts(WebApiType type, HtmlDocument doc)
+        public List<Post> ParsePosts(WebApiType type, HtmlDocument doc)
         {
             var posts = new List<Post>();
 
@@ -684,7 +684,7 @@ namespace MiiverseArchive.Context
             return Client.HeadAsync(string.Format(MiiverseConstantValues.MIIVERSE_SIGN_OUT_URI_STRING, ClientID));
         }
 
-        private void AccessCheck()
+        public void AccessCheck()
         {
             if (!_isEnabled)
             {
@@ -692,7 +692,7 @@ namespace MiiverseArchive.Context
             }
         }
 
-        private double ReturnEpochTime(DateTime postedDate)
+        public double ReturnEpochTime(DateTime postedDate)
         {
             var epoch = postedDate - new DateTime(1970, 1, 1);
             return epoch.TotalSeconds;
@@ -708,9 +708,9 @@ namespace MiiverseArchive.Context
         public string ClientID { get; set; }
         public string SessionValue { get; set; }
 
-        private HttpClient Client { get; set; }
+        public HttpClient Client { get; set; }
 
-        private Post ParsePost(HtmlNode postNode)
+        public Post ParsePost(HtmlNode postNode)
         {
             DateTime dateTime;
             try
@@ -938,7 +938,7 @@ namespace MiiverseArchive.Context
                 new PostCommunity(titleID, communityID, communityName, communityIconUri));
         }
 
-        private DateTime ConvertRelativeTime(string input)
+        public DateTime ConvertRelativeTime(string input)
         {
             DateTime result = DateTime.MinValue;
             int minutesMultiplier = 0;
